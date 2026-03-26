@@ -7,7 +7,6 @@
 CLI_PATH      ?= src/pathseq-t2t
 BIN_DIR       ?= ~/.local/bin
 IMAGE_NAME    ?= pathseq-t2t
-ENV_FILE      ?= environment.yml
 
 # Fail fast on pipeline errors in recipe lines
 .SHELLFLAGS := -eu -o pipefail -c
@@ -26,7 +25,7 @@ help:
 	@echo "  test           Run smoke tests (help screens)"
 	@echo "  docker-build   Build Docker image ($(IMAGE_NAME))"
 	@echo "  docker-run     Run container and print CLI help"
-	@echo "  conda-env      Create Conda env from $(ENV_FILE)"
+	@echo "  conda-env      Not yet implemented"
 	@echo "  clean          Remove pipeline output directory"
 	@echo "  veryclean      Clean + remove common temp artifacts"
 
@@ -56,10 +55,14 @@ lint:
 test: $(CLI_PATH)
 	chmod +x $(CLI_PATH)
 	./$(CLI_PATH) --help >/dev/null
+	./$(CLI_PATH) filter --help >/dev/null
 	./$(CLI_PATH) prefilter --help >/dev/null
 	./$(CLI_PATH) qcfilter --help >/dev/null
 	./$(CLI_PATH) t2tfilter --help >/dev/null
 	./$(CLI_PATH) classify --help >/dev/null
+	./$(CLI_PATH) assemble --help >/dev/null
+	./$(CLI_PATH) binqc --help >/dev/null
+	./$(CLI_PATH) summarize --help >/dev/null
 	@echo "Smoke tests passed."
 
 # -------------------------
@@ -74,10 +77,9 @@ docker-run:
 # -------------------------
 # Conda
 # -------------------------
-conda-env: $(ENV_FILE)
-	@command -v mamba >/dev/null || { echo "mamba not found; fallback to conda"; \
-		conda env create -f $(ENV_FILE); exit 0; }
-	mamba env create -f $(ENV_FILE)
+conda-env:
+	@echo "Conda environment support is not implemented yet."
+	@exit 1
 
 # -------------------------
 # Clean
@@ -87,4 +89,3 @@ clean:
 
 veryclean: clean
 	find . -name "*.log" -o -name "*.tmp" -o -name "*.bz2" -o -name "*.sbi" -o -name "*.bai" | xargs -r rm -f
-

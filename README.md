@@ -1,266 +1,444 @@
 # pathseq-t2t
 
-A host subtraction, quality control, and classification pipeline for identifying low-biomass microbial signals in sequencing data.
+PathSeq-T2T is a host-subtraction and microbial profiling workflow for low-biomass sequencing data.
 
----
+## Install
 
-## Required software
-- `samtools >=1.16`
-- `gatk >=4`
-- `java 17`
-- `picard`
-- `bwa`
-- `kraken2`
-- `metaphlan4`
-- `bowtie2`
-
----
-
-## Required databases
-
-* **PathSeq host k-mer database** \
-  Must contain both `pathseq_host.bfi` (8.6G) and `pathseq_host.fa.img` (6.6G). Available from GATK Best Practices resource bundles:  
-  <https://console.cloud.google.com/storage/browser/gatk-best-practices/pathseq/resources>
-
-* **T2T-CHM13 reference genome** \
-  Available via NCBI FTP (1G):  
-  <https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/914/755/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.fna.gz>
-
-* **Kraken2 database** \
-  There are several prebuilt versions, but we recommend PlusPF (~100G), available here:  
-  <https://benlangmead.github.io/aws-indexes/k2>
-
-* **MetaPhlAn4 databases** \
-  Requires the CHOCOPhlAn SGB database (~3G) and bowtie2 index (~20G), available here: 
-  <http://cmprod1.cibio.unitn.it/biobakery4/metaphlan_databases/>
-
-
----
-
-## Installation
-
-### Option 1: Clone and run directly
-Clone this repository and add the CLI to your `PATH`:
-
-```
+```bash
 git clone https://github.com/<your-org>/pathseq-t2t.git
 cd pathseq-t2t
 chmod +x src/pathseq-t2t
-export PATH=$PWD/src:$PATH
+export PATH="$PWD/src:$PATH"
 pathseq-t2t --help
 ```
 
-### Option 2: Conda (coming soon)
+Conda environment setup is not implemented yet.
+
+## Commands
+
+- `prefilter`
+- `qcfilter`
+- `t2tfilter`
+- `filter`
+- `classify`
+- `assemble`
+- `binqc`
+- `binclassify`
+- `summarize`
+- `summarize-assembly`
+
+Default output root is `./pst2t_out`.
+
+## Naming policy
+
+Each command supports two modes:
+
+- `--sample-id` mode: input/output paths are filled using command defaults.
+- Explicit mode (no `--sample-id`): input/output paths must be provided explicitly.
 
 
----
+## Core dependencies
 
-## Description
+- `samtools >= 1.16`
+- `gatk >= 4`
+- `java 17`
+- `picard`
+- `bwa >= 0.7.17`
+- `kraken2`
+- `metaphlan >= 4`
+- `sylph >= 0.9.0` and `sylph-tax` (if using Sylph)
+- `python3` + `pandas` (for `summarize`)
 
-PathSeq-T2T is broken into five steps, given by five commands:
+Additional dependencies for `assemble`:
 
-1. **`prefilter`**: selects hg38-unmapped reads (with optional decoy regions excluded).  
-2. **`qcfilter`**: performs quality/complexity filtering and host k-mer subtraction using GATK PathSeqFilterSpark.  
-3. **`t2tfilter`**: subtractive alignment against the complete T2T-CHM13 human genome reference.  
-4. **`classify`**: microbial classification using Kraken2 and/or MetaPhlAn4 (writes raw reports to `classification_stats/`).  
-5. **`summarize`**: generates filtering and classification metrics and writes normalized classification tables to `results/`.
+- `trim_galore >= 0.6.10`
+- `megahit >= 1.2.9`
+- `bowtie2` and `bowtie2-build`
+- `metabat2` and `jgi_summarize_bam_contig_depths`
+- `pigz` (optional; gzip fallback is used if absent)
 
-Please note that each of these steps requires different amounts of memory, so if you are running this on an HPC environment, its recommended you run these steps separately. Memory recommendations are given below:
+Additional dependencies for `binqc`:
 
-prefilter: 50-100Mb
-qcfilter: 32-64Gb
-t2tfilter: 4-8Gb
-classify: 128Gb for kraken2, 32-64Gb for MetaPhlAn4
+- `checkm2`
+- `checkv` (required in default `binqc --model both` mode)
 
----
+Additional dependencies for `binclassify`:
 
-## Usage examples
+- `gtdbtk`
+- `GTDBTK_DATA_PATH` set to a compatible GTDB-Tk reference data directory
 
-### Step 1. Prefilter
-`pathseq-t2t prefilter --input-bam sample.bam --regions-to-exclude decoys.bed --aligner bwa`
+## Reference databases/files
 
-### Step 2. QC filter
+- PathSeq host directory containing:
+  - `pathseq_host.bfi`
+  - `pathseq_host.fa.img`
+- T2T FASTA (`--reference` or `$T2TREF`) for `t2tfilter`
+- Kraken2 database for Kraken (`--kraken-index` or `$KRAKEN_INDEX`)
+- MetaPhlAn index name and Bowtie2 index dir for MetaPhlAn (`--metaphlan-index` / `--bowtie2-index` or env vars)
+- Sylph `.syldb` file(s) and taxonomy tag(s) for Sylph mode
 
-```
-pathseq-t2t qcfilter \ 
-  --input-unaligned pst2t_output/bams/sample.prefilter.unaligned.bam \ 
-  --input-excluded pst2t_output/bams/sample.prefilter.excluded.bam \ 
-  --hostdir /refs/pathseq_host
-```
+## Typical workflow
 
-### Step 3. T2T filter
-```
-pathseq-t2t t2tfilter \ 
-  --input-paired pst2t_output/bams/sample.qcfilt_paired.bam \ 
-  --input-unpaired pst2t_output/bams/sample.qcfilt_unpaired.bam \ 
-  --reference /refs/t2t.fa
-```
+```bash
+pathseq-t2t prefilter --input-bam sample.bam --aligner bwa --decoys-to-mask non_human_decoys.bed
 
-### Step 4. Classification
-```
-pathseq-t2t classify \ 
-  --input-paired pst2t_output/bams/sample.t2tfilt_paired.bam \ 
-  --input-unpaired pst2t_output/bams/sample.t2tfilt_unpaired.bam \ 
-  --classifier both \ 
-  --kraken-index /db/kraken \ 
-  --metaphlan-index mpa_vJun23_CHOCOPhlAnSGB_202403 \ 
-  --bowtie2-index /db/bowtie2
-```
+pathseq-t2t filter --input-bam sample.bam --aligner bwa --decoys-to-mask non_human_decoys.bed \
+  --sample-id sample --hostdir /refs/pathseq_host --reference /refs/t2t.fa --outdir ./pst2t_out
 
-### Step 5. Summarize
-```
-pathseq-t2t summarize \ 
-  --sample-id SAMPLE123 \ 
-  --filter-stats-dir $OUTDIR/filter_stats \ 
-  --classification-stats-dir $OUTDIR/classification_stats \ 
-  --results-dir $OUTDIR/results \ 
-  --verbose
-```
+pathseq-t2t qcfilter --sample-id sample --hostdir /refs/pathseq_host --outdir ./pst2t_out
 
----
+pathseq-t2t t2tfilter --sample-id sample --reference /refs/t2t.fa --outdir ./pst2t_out
 
-## Step 1. Prefilter
+pathseq-t2t classify --sample-id sample --classifiers kraken,metaphlan,sylph --outdir ./pst2t_out \
+  --kraken-index /db/k2_pluspf_20240605 \
+  --metaphlan-index mpa_vJun23_CHOCOPhlAnSGB_202403 \
+  --bowtie2-index /db/mpa_vJun23_CHOCOPhlAnSGB_202403_bt2.tar \
+  --sylph-index /db/gtdb-r226-c200-dbv1.syldb \
+  --sylph-taxonomy GTDB_r226
 
-This step selects reads not aligned in the input BAM file. Typically your BAM will be aligned to hg38 prior to delivery. Please check the exact aligner was used (e.g. BWA versus DRAGEN) and which alignment parameters were used, because this will have significant affects on pre-filtering.
+pathseq-t2t assemble --sample-id sample --input-unaligned ./pst2t_out/bams/sample.prefilter.unaligned.bam \
+  --input-decoys ./pst2t_out/bams/sample.prefilter.decoys.bam --outdir ./pst2t_out
 
-```
-pathseq-t2t prefilter \ 
-  --input-bam sample.bam \ 
-  --regions-to-exclude decoys.bed \ 
-  --aligner bwa
-```
+pathseq-t2t binqc --sample-id sample --outdir ./pst2t_out
 
-**Options**
-* `--aligner bwa|dragen    The aligner used to generate the unput bam (required)`
-* `--regions-to-exclude    <bed> (required; use None to disable)`
-* `--threads               <int> (auto-detected if omitted)`
-* `--sample-id             <string> (default: basename of input)`  
+pathseq-t2t binclassify --sample-id sample --outdir ./pst2t_out
 
-**Outputs**
-* `<sample>.prefilter.unaligned.bam` 
-* `<sample>.prefilter.excluded.bam`
-* `<sample>.flagstat.tsv`
+pathseq-t2t summarize --sample-id sample --outdir ./pst2t_out --results-dir ./pst2t_out/results -v
 
----
-
-## Step 2. QC filter
-
-This step performs quality/complexity filtering, masking, and screens reads for host-matching k-mers.
-
-```
-pathseq-t2t qcfilter \ 
-  --input-unaligned pst2t_output/bams/sample.prefilter.unaligned.bam \ 
-  --input-excluded pst2t_output/bams/sample.prefilter.excluded.bam \ 
-  --hostdir /refs/pathseq_host
+pathseq-t2t summarize-assembly --sample-id sample --outdir ./pst2t_out \
+  --input-flagstat ./pst2t_out/filter_stats/sample.flagstat.tsv
 ```
 
-**Options**
-* `--sample-id              <string> (default: basename of input)`
-* `--ram-gb                 <int> (default: 16)`
-* `--threads                <int> (auto-detected)`
-* `--min-clipped-read-length<int> (default: 60)`
-* `--dont-overwrite         Skip step if outputs already exist`
-* `--keep-intermediate      Retain intermediate files`
-* `--psfilterspark-args     "<extra args>" to pass to GATK PathSeqFilterSpark`
-* `--picard-jar             </path/picard.jar>`
+## Resource guidance
 
-**Outputs**
-* `<sample>.qcfilt_paired.bam`
-* `<sample>.qcfilt_unpaired.bam`
-* `<sample>.excluded.filter_metrics.txt`
-* `<sample>.unaligned.filter_metrics.txt`
+Approximate memory usage by step (run steps separately on HPC when possible):
 
----
+- `prefilter`: 50-100 MB
+- `qcfilter`: 32-64 GB
+- `t2tfilter`: 4-8 GB
+- `classify`: ~128 GB (Kraken), 32-64 GB (MetaPhlAn, Sylph)
 
-## Step 3. T2T filter
+## Command reference
 
-This step performs subtractive alignment to T2T-CHM13.
+### 1) `filter`
 
-```
-pathseq-t2t t2tfilter \ 
-  --input-paired pst2t_output/bams/sample.qcfilt_paired.bam \ 
-  --input-unpaired pst2t_output/bams/sample.qcfilt_unpaired.bam \ 
-  --reference /refs/t2t.fa
-```
+Run `prefilter`, `qcfilter`, and `t2tfilter` in sequence as a single command.
 
-**Options**
-* `--sample-id          <string> (default: basename of input)`
-* `--threads            <int> (auto-detected)`
-* `--dont-overwrite     Skip step if outputs already exist`
-* `--keep-intermediate  Retain intermediate files`
-* `--picard-jar         </path/picard.jar>`
-
-**Outputs**
-* `<sample>.t2tfilt_paired.bam`
-* `<sample>.t2tfilt_unpaired.bam`
-* `<sample>.qcfilt_paired.t2t_aln.flagstat.tsv`
-* `<sample>.qcfilt_paired.t2t_unaln.flagstat.tsv`
-* `<sample>.qcfilt_unpaired.t2t_aln.flagstat.tsv`
-* `<sample>.qcfilt_unpaired.t2t_unaln.flagstat.tsv`
-
----
-
-## Step 4. Classification
-
-This step classifies filtered, putatively non-human sequencing reads with Kraken2 and MetaPhlAn4. Raw classifier outputs are written to `$OUTDIR/classification_stats/`.
-
-```
-pathseq-t2t classify \ 
-  --input-paired pst2t_output/bams/sample.t2tfilt_paired.bam \ 
-  --input-unpaired pst2t_output/bams/sample.t2tfilt_unpaired.bam \ 
-  --classifier both \ 
-  --kraken-index /db/kraken \ 
-  --metaphlan-index mpa_vJun23_CHOCOPhlAnSGB_202403 \ 
-  --bowtie2-index /db/bowtie2
+```bash
+pathseq-t2t filter \
+  --input-bam <bam> \
+  --aligner <dragen|bwa> \
+  --decoys-to-mask <bed|None> \
+  [--sample-id <id>] \
+  [--outdir <dir>] \
+  [--hostdir <dir>] \
+  [--reference <t2t.fa>] \
+  [--threads <int>] \
+  [--dont-overwrite] \
+  [--keep-intermediate] \
+  [--prefilter-args "<args>"] \
+  [--qcfilter-args "<args>"] \
+  [--t2tfilter-args "<args>"]
 ```
 
-**Options**
-* `--classifier         kraken|metaphlan|both (default: kraken)`
-* `--sample-id          <string> (default: basename of input)`
-* `--threads            <int> (auto-detected)`
-* `--dont-overwrite     Skip step if outputs already exist`
-* `--keep-intermediate  Retain intermediate files`
-* `--kraken-index       <dir> or $KRAKEN_INDEX`
-* `--metaphlan-index    <name> or $METAPHLAN_INDEX`
-* `--bowtie2-index      <dir> or $BOWTIE2_INDEX`
-* `--kraken-args        "<extra args>" for Kraken2`
-* `--metaphlan-args     "<extra args>" for MetaPhlAn4`
+Required inputs:
 
-**Kraken2 outputs (in `$OUTDIR/classification_stats/`)**
-* `<sample>.paired.kraken.output.txt`
-* `<sample>.paired.kraken.report.txt`
-* `<sample>.unpaired.kraken.output.txt`
-* `<sample>.unpaired.kraken.report.txt`
+- `--input-bam`, `--aligner`, `--decoys-to-mask`
+- `--hostdir <dir>` or `$HOSTDIR`
+- `--reference <t2t.fa>` or `$T2TREF`
 
-**MetaPhlAn4 outputs (in `$OUTDIR/classification_stats/`)**
-* `<sample>.metaphlan.report.txt`
-* `<sample>.metaphlan.bowtie2.bz2`
+### 2) `prefilter`
 
----
+Select host-unmapped reads and decoy-overlapping reads from an input BAM.
 
-## Step 5. Summarize
-
-This step generates a combined filtering/classification summary and normalized classification tables. Final, outputs are written to `$OUTDIR/results/`.
-
-```
-pathseq-t2t summarize   \
-  --sample-id <sample>   \
-  --filter-stats-dir $OUTDIR/filter_stats  \
-  --classification-stats-dir $OUTDIR/classification_stats \
-  --results-dir $OUTDIR/results \
-  --verbose
+```bash
+pathseq-t2t prefilter \
+  --input-bam <bam> \
+  --aligner <dragen|bwa> \
+  --decoys-to-mask <bed|None> \
+  [--sample-id <id>] \
+  [--outdir <dir>] \
+  [--unaligned-out <bam>] \
+  [--decoys-out <bam>] \
+  [--flagstat-out <tsv>] \
+  [--threads <int>] \
+  [--dont-overwrite]
 ```
 
-**Options**
-* `--sample-id                 <string> (required)`
-* `--filter-stats-dir          <dir> (default: $OUTDIR/filter_stats)`
-* `--classification-stats-dir  <dir> (default: $OUTDIR/classification_stats)`
-* `--results-dir               <dir> (default: $OUTDIR/results)`
-* `-v|--verbose`
+Required inputs:
 
-**Outputs (to `$OUTDIR/results/`)**
-* `<sample>.summary.tsv`  (combined filtering + classification totals)
-* `<sample>.kraken.txt`   (normalized Kraken2 table with RPM calculations)
-* `<sample>.metaphlan.txt` (normalized MetaPhlAn table with RPM calcuations)
+- Always: `--input-bam`, `--aligner`, `--decoys-to-mask`
+- With `--sample-id`: outputs default under `<outdir>`
+- Without `--sample-id`: provide `--unaligned-out`, `--decoys-out`, and `--flagstat-out`
 
+Default outputs:
 
+- `<outdir>/bams/<ID>.prefilter.unaligned.bam`
+- `<outdir>/bams/<ID>.prefilter.decoys.bam`
+- `<outdir>/filter_stats/<ID>.flagstat.tsv`
+
+### 3) `qcfilter`
+
+Run PathSeqFilterSpark on prefilter outputs (unaligned + decoys), then merge outputs.
+
+```bash
+pathseq-t2t qcfilter \
+  [--outdir <dir>] \
+  [--sample-id <id>] \
+  [--hostdir <dir>] \
+  [--input-unaligned <bam>] \
+  [--input-decoys <bam>] \
+  [--paired-out <bam>] \
+  [--unpaired-out <bam>] \
+  [--metrics-unaligned <txt>] \
+  [--metrics-decoys <txt>] \
+  [--threads <int>] \
+  [--ram-gb <int>] \
+  [--tmpdir <dir>] \
+  [--min-clipped-read-length <int>] \
+  [--psfilterspark-args "<args>"] \
+  [--picard-jar <jar>] \
+  [--dont-overwrite] \
+  [--keep-intermediate]
+```
+
+Required inputs:
+
+- `--hostdir <dir>` or `$HOSTDIR`
+- With `--sample-id`: missing inputs/outputs/metrics are filled from defaults
+- Without `--sample-id`: provide `--input-unaligned`, `--paired-out`, `--unpaired-out`, and `--metrics-unaligned`
+- If `--input-decoys` is provided without `--sample-id`, also provide `--metrics-decoys`
+
+Default outputs:
+
+- `<outdir>/bams/<ID>.qcfilt_paired.bam`
+- `<outdir>/bams/<ID>.qcfilt_unpaired.bam`
+- `<outdir>/filter_stats/<ID>.prefilter.unaligned.filter_metrics.txt`
+- `<outdir>/filter_stats/<ID>.prefilter.decoys.filter_metrics.txt`
+
+### 4) `t2tfilter`
+
+Subtract reads by alignment to T2T reference and emit unmapped paired/unpaired BAMs.
+
+```bash
+pathseq-t2t t2tfilter \
+  [--outdir <dir>] \
+  [--sample-id <id>] \
+  [--input-paired <bam>] \
+  [--input-unpaired <bam>] \
+  [--reference <t2t.fa>] \
+  [--decoys-to-mask <bed|None>] \
+  [--output-paired <bam>] \
+  [--output-unpaired <bam>] \
+  [--flagstat-unaln-paired <tsv>] \
+  [--flagstat-unaln-unpaired <tsv>] \
+  [--threads <int>] \
+  [--picard-jar <jar>] \
+  [--dont-overwrite] \
+  [--keep-intermediate]
+```
+
+Required inputs:
+
+- `--reference <t2t.fa>` or `$T2TREF`
+- With `--sample-id`: missing inputs/outputs/flagstats are filled from defaults
+- Without `--sample-id`: provide `--input-paired`, `--input-unpaired`, `--output-paired`, `--output-unpaired`, `--flagstat-unaln-paired`, and `--flagstat-unaln-unpaired`
+- If `--decoys-to-mask <bed>` is provided, aligned reads overlapping those regions are merged back into the final paired/unpaired outputs.
+
+Default outputs:
+
+- `<outdir>/bams/<ID>.t2tfilt_paired.bam`
+- `<outdir>/bams/<ID>.t2tfilt_unpaired.bam`
+- `<outdir>/filter_stats/<ID>.qcfilt_paired.t2t_unaln.flagstat.tsv`
+- `<outdir>/filter_stats/<ID>.qcfilt_unpaired.t2t_unaln.flagstat.tsv`
+
+### 5) `classify`
+
+Classify T2T-filtered reads with one or more classifiers.
+
+```bash
+pathseq-t2t classify \
+  [--outdir <dir>] \
+  [--sample-id <id>] \
+  [--input-paired <bam>] \
+  [--input-unpaired <bam>] \
+  [--classifiers "kraken,metaphlan,sylph"] \
+  [--kraken-index <dir>] \
+  [--metaphlan-index <name>] \
+  [--bowtie2-index <dir>] \
+  [--sylph-index <file.syldb>]... \
+  [--sylph-taxonomy <name>]... \
+  [--kraken-args "<args>"] \
+  [--metaphlan-args "<args>"] \
+  [--sylph-args "<args>"] \
+  [--threads <int>] \
+  [--picard-jar <jar>] \
+  [--java-mem <mem>] \
+  [--dont-overwrite] \
+  [--keep-intermediate]
+```
+
+Required inputs:
+
+- With `--sample-id`: missing input/output paths are filled from defaults
+- Without `--sample-id`: provide explicit `--input-paired` and `--input-unpaired`
+- Without `--sample-id`: provide explicit output/report paths for selected classifiers
+- If running Kraken (default): `--kraken-index <dir>` or `$KRAKEN_INDEX`
+- If running MetaPhlAn: `--metaphlan-index <name>` and `--bowtie2-index <dir>` (or env vars)
+- If running Sylph: one or more `--sylph-index` and `--sylph-taxonomy` values
+
+Default reports are written in `<outdir>/classification_stats`.
+
+### 6) `assemble`
+
+Assemble reads from prefilter outputs and perform binning.
+
+```bash
+pathseq-t2t assemble \
+  --input-unaligned <bam> \
+  [--input-decoys <bam>] \
+  [--sample-id <id>] \
+  [--outdir <dir>] \
+  [--assembly-dir <dir>] \
+  [--threads <int>] \
+  [--min-contig-len <int>] \
+  [--trim-galore-args "<args>"] \
+  [--dont-overwrite] \
+  [--keep-intermediate]
+```
+
+Required inputs:
+
+- Always: `--input-unaligned`
+- With `--sample-id`: `--assembly-dir` defaults to `<outdir>/assembly/<sample-id>`
+- Without `--sample-id`: provide `--assembly-dir`
+
+Pipeline steps:
+
+1. BAM to FASTQ (`samtools collate` + `samtools fastq`)
+2. Read trimming (`trim_galore`)
+3. Assembly (`megahit`)
+4. Contig indexing and mapping (`bowtie2-build`, `bowtie2`)
+5. Depth estimation and binning (`jgi_summarize_bam_contig_depths`, `metabat2`)
+
+Default output root:
+
+- `<outdir>/assembly/<sample>/`
+
+### 7) `binqc`
+
+Run CheckM2 on assembled bins.
+
+```bash
+pathseq-t2t binqc \
+  [--sample-id <id>] \
+  [--outdir <dir>] \
+  [--assembly-dir <dir>] \
+  [--bins-dir <dir>] \
+  [--qc-dir <dir>] \
+  [--model <both|checkm2|checkv>] \
+  [--checkv-db <dir>] \
+  [--threads <int>] \
+  [--dont-overwrite]
+```
+
+Required inputs:
+
+- With `--sample-id`: defaults are inferred under `<outdir>/assembly/<sample-id>/...`
+- Without `--sample-id`: provide explicit `--bins-dir`
+- `--qc-dir` is only valid in single-model mode (`checkm2` or `checkv`)
+- Default `--model` is `both` (runs CheckM2 then CheckV)
+- For CheckV mode: provide `--checkv-db <dir>` or set `$CHECKVDB`
+
+Default outputs:
+
+- `--model both`: `<outdir>/assembly/<sample>/checkm2/quality_report.tsv` and `<outdir>/assembly/<sample>/checkv/quality_summary.tsv`
+- `--model checkm2`: `<outdir>/assembly/<sample>/checkm2/quality_report.tsv`
+- `--model checkv`: `<outdir>/assembly/<sample>/checkv/quality_summary.tsv`
+
+### 8) `binclassify`
+
+Classify assembled bins with GTDB-Tk.
+
+```bash
+pathseq-t2t binclassify \
+  [--sample-id <id>] \
+  [--outdir <dir>] \
+  [--assembly-dir <dir>] \
+  [--bins-dir <dir>] \
+  [--classify-dir <dir>] \
+  [--threads <int>] \
+  [--extension <ext>] \
+  [--gtdbtk-args "<args>"] \
+  [--dont-overwrite]
+```
+
+Required inputs:
+
+- With `--sample-id`: defaults are inferred under `<outdir>/assembly/<sample-id>/...`
+- Without `--sample-id`: provide `--bins-dir`
+- If `--sample-id` is omitted and `--classify-dir` is omitted, provide `--assembly-dir`
+- `GTDBTK_DATA_PATH` must point to the GTDB-Tk reference data directory
+
+Default outputs:
+
+- `<outdir>/assembly/<sample>/gtdbtk_output/*.summary.tsv`
+
+GTDB-Tk writes bacterial and archaeal classification summaries such as:
+
+- `gtdbtk.bac120.summary.tsv`
+- `gtdbtk.ar53.summary.tsv`
+
+### 9) `summarize`
+
+Generate combined filtering/classification summary and normalized classifier tables.
+
+```bash
+pathseq-t2t summarize \
+  --sample-id <id> \
+  [--outdir <dir>] \
+  [--results-dir <dir>] \
+  [--input-flagstat <tsv>] \
+  [--qcfilter-metrics-unaligned <txt>] \
+  [--qcfilter-metrics-decoys <txt>] \
+  [--t2tfilter-flagstat-paired <tsv>] \
+  [--t2tfilter-flagstat-unpaired <tsv>] \
+  [--kraken-report-paired <txt>] \
+  [--kraken-report-unpaired <txt>] \
+  [--metaphlan-report <txt>] \
+  [--sylph-report-paired <txt>] \
+  [--sylph-report-unpaired <txt>] \
+  [-v|--verbose]
+```
+
+Default outputs in `<results-dir>`:
+
+- `<sample>.summary.tsv`
+- `<sample>.kraken.txt` (if Kraken2 reports exist)
+- `<sample>.metaphlan.txt` (if MetaPhlAn report exists)
+- `<sample>.sylph.txt` (if Sylph reports exist)
+
+### 10) `summarize-assembly`
+
+Generate per-sample assembly QC and bin classification summaries from `assemble`, `binqc`, and `binclassify` outputs.
+
+```bash
+pathseq-t2t summarize-assembly \
+  --sample-id <id> \
+  [--outdir <dir>] \
+  [--assembly-dir <dir>] \
+  [--results-dir <dir>] \
+  [--input-flagstat <tsv>] \
+  [-v|--verbose]
+```
+
+Required inputs:
+
+- `--sample-id`
+- With `--sample-id`: assembly directory defaults to `<outdir>/assembly/<sample-id>`
+- `--input-flagstat`: prefilter flagstat TSV (provides primary read count; inferred from `<outdir>/filter_stats/<sample>.flagstat.tsv` when using `--sample-id` defaults)
+
+Default outputs in `<outdir>/results/`:
+
+- `<sample>.assembly_summary.tsv` — one-row pipeline QC summary (read counts, assembly stats, binning stats, CheckM2/CheckV/GTDB-Tk counts)
+- `<sample>.bin_summary.tsv` — one row per bin (completeness, contamination, viral quality, taxonomy)

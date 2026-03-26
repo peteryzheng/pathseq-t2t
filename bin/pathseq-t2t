@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Resolve repo root and exec real script
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+exec "${SCRIPT_DIR%/bin}/src/pathseq-t2t" "$@"

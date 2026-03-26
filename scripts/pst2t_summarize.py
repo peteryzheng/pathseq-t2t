@@ -81,8 +81,8 @@ def collect_primary_reads(
 
     mapping = {
         'PRIMARY_READS':                  input_flagstat,
-        'T2T_UNALIGNED_PAIRED_READS':   t2tfilter_flagstat_paired,
-        'T2T_UNALIGNED_UNPAIRED_READS': t2tfilter_flagstat_unpaired,
+        'T2T_UNALIGNED_PAIRED_READS':     t2tfilter_flagstat_paired,
+        'T2T_UNALIGNED_UNPAIRED_READS':   t2tfilter_flagstat_unpaired,
     }
     for key, path in mapping.items():
         if path and os.path.isfile(path):
@@ -164,7 +164,7 @@ def collect_pathseq_metrics(qcfilter_metrics_unaligned: str, qcfilter_metrics_de
 FILTER_SUMMARY_ORDER = (
     ['PRIMARY_READS']
     + [f'{kind}_{col}' for kind in ('QCFILTER', 'UNALIGNED', 'DECOYS') for col in PATHSEQ_COLS]
-    + ['T2T_UNALIGNED_PAIRED_PRIMARY', 'T2T_UNALIGNED_UNPAIRED_PRIMARY']
+    + ['T2T_UNALIGNED_PAIRED_READS', 'T2T_UNALIGNED_UNPAIRED_READS']
     + ['FINAL_READ_COUNT','FINAL_READ_COUNT_INCLUDING_MATES']
 )
 
@@ -189,12 +189,17 @@ def filtering_summary(
 
     merged = pd.concat([rs_flagstat, rs_pathseq])
 
-    merged['FINAL_READ_COUNT'] = merged.T2T_UNALIGNED_PAIRED_PRIMARY + merged.T2T_UNALIGNED_UNPAIRED_PRIMARY
-    merged['FINAL_READ_COUNT_INCLUDING_MATES'] = merged.T2T_UNALIGNED_PAIRED_PRIMARY + 2*merged.T2T_UNALIGNED_UNPAIRED_PRIMARY
+    paired_reads = merged.get('T2T_UNALIGNED_PAIRED_READS', 0)
+    unpaired_reads = merged.get('T2T_UNALIGNED_UNPAIRED_READS', 0)
+    if pd.isna(paired_reads):
+        paired_reads = 0
+    if pd.isna(unpaired_reads):
+        unpaired_reads = 0
+
+    merged['FINAL_READ_COUNT'] = paired_reads + unpaired_reads
+    merged['FINAL_READ_COUNT_INCLUDING_MATES'] = paired_reads + 2 * unpaired_reads
 
     row = merged.reindex(FILTER_SUMMARY_ORDER).fillna(0).astype(int)
-
-    print(row)
 
     return row
 
@@ -340,7 +345,7 @@ def summarize_classification(
     # MetaPhlAn totals
     mpa_path = metaphlan_report
     if mpa_path and os.path.isfile(mpa_path) and os.path.getsize(mpa_path) != 0:
-        processed_reads = 0
+        classified_reads = pd.NA
         with open(mpa_path, 'r', encoding='utf-8') as fh:
             for line in fh:
                 if not line.startswith('#'):
@@ -363,7 +368,7 @@ def summarize_classification(
         eukaryota_reads  = df_mpa.loc[df_mpa['clade_name']=='k__Eukaryota','estimated_number_of_reads_from_the_clade'].sum()
 
         summary.update(dict(
-            CLASSIFIED_READS_MPA          = int(classified_reads),
+            CLASSIFIED_READS_MPA          = classified_reads,
             MICROBIAL_READS_MPA         = int(bacteria_reads + archaea_reads + eukaryota_reads),
             BACTERIA_READS_MPA       = int(bacteria_reads),
             ARCHAEA_READS_MPA        = int(archaea_reads),
@@ -593,8 +598,6 @@ def main():
     ]:
         if {num, denom}.issubset(combined.index) and combined[denom]:
             combined[rate] = f"{100 * combined[num] / combined[denom]:.4f}%"
-
-    print(combined)
 
     # (a) combined filtering/classification summary
     out_summary = os.path.join(args.results_dir, f'{sample}.summary.tsv')
