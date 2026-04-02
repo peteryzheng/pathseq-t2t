@@ -1,0 +1,22 @@
+name: main
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas>=1.5
+  - samtools>=1.16
+  - bwa>=0.7.17
+  - bowtie2
+  - picard
+  - gatk4
+  - megahit>=1.2.9
+  - trim-galore>=0.6.10
+  - metabat2
+  - kraken2
+  - pigz
+  - pip
+  - pip:
+      - sylph>=0.9.0
+      - sylph-tax
