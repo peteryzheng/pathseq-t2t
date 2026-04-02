@@ -111,12 +111,23 @@ pathseq-t2t summarize-assembly --sample-id sample --outdir ./pst2t_out \
 
 ## Resource guidance
 
-Approximate memory usage by step (run steps separately on HPC when possible):
+Run steps separately on HPC when possible. CPU guidance: 1 CPU per 4 GB RAM (minimum 4).
+Wall-times are empirical estimates from TCGA WGS samples (low-biomass); higher-biomass samples may take longer.
 
-- `prefilter`: 50-100 MB
-- `qcfilter`: 32-64 GB
-- `t2tfilter`: 4-8 GB
-- `classify`: ~128 GB (Kraken), 32-64 GB (MetaPhlAn, Sylph)
+| Step | Suggested RAM | Suggested CPUs | Expected wall-time |
+|------|--------------|----------------|--------------------|
+| `prefilter` | 1 GB | 4 | 2–8 h |
+| `qcfilter` | 64 GB | 16 | < 30 min |
+| `t2tfilter` | 8 GB | 4 | < 30 min |
+| `filter` (combined) | 64 GB | 16 | 3–9 h |
+| `classify` (Kraken2) | 128 GB | 32 | < 5 min |
+| `classify` (MetaPhlAn) | 64 GB | 16 | < 2 h |
+| `classify` (Sylph) | 16 GB | 4 | < 5 min |
+| `assemble` | 32 GB | 8 | 1–10 h |
+| `binqc` | 8 GB | 4 | < 30 min |
+| `binclassify` | 32 GB | 8 | < 1 h |
+| `summarize` | 1 GB | 4 | < 1 min |
+| `summarize-assembly` | 1 GB | 4 | < 1 min |
 
 ## Command reference
 
