@@ -25,7 +25,7 @@ help:
 	@echo "  test           Run smoke tests (help screens)"
 	@echo "  docker-build   Build Docker image ($(IMAGE_NAME))"
 	@echo "  docker-run     Run container and print CLI help"
-	@echo "  conda-env      Not yet implemented"
+	@echo "  conda-env      Create all conda environments from envs/*.yml"
 	@echo "  clean          Remove pipeline output directory"
 	@echo "  veryclean      Clean + remove common temp artifacts"
 
@@ -62,7 +62,9 @@ test: $(CLI_PATH)
 	./$(CLI_PATH) classify --help >/dev/null
 	./$(CLI_PATH) assemble --help >/dev/null
 	./$(CLI_PATH) binqc --help >/dev/null
+	./$(CLI_PATH) binclassify --help >/dev/null
 	./$(CLI_PATH) summarize --help >/dev/null
+	./$(CLI_PATH) summarize-assembly --help >/dev/null
 	@echo "Smoke tests passed."
 
 # -------------------------
@@ -78,8 +80,14 @@ docker-run:
 # Conda
 # -------------------------
 conda-env:
-	@echo "Conda environment support is not implemented yet."
-	@exit 1
+	@command -v mamba >/dev/null 2>&1 || command -v micromamba >/dev/null 2>&1 || \
+	  { echo "mamba or micromamba required"; exit 1; }
+	$(if $(shell command -v micromamba 2>/dev/null),micromamba,mamba) env create -f envs/main.yml
+	$(if $(shell command -v micromamba 2>/dev/null),micromamba,mamba) env create -f envs/metaphlan.yml
+	$(if $(shell command -v micromamba 2>/dev/null),micromamba,mamba) env create -f envs/checkm2.yml
+	$(if $(shell command -v micromamba 2>/dev/null),micromamba,mamba) env create -f envs/checkv.yml
+	$(if $(shell command -v micromamba 2>/dev/null),micromamba,mamba) env create -f envs/gtdbtk.yml
+	@echo "All conda environments created."
 
 # -------------------------
 # Clean
