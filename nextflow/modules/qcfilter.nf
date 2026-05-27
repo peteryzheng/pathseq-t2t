@@ -5,6 +5,7 @@ process QCFILTER {
 
     input:
     tuple val(sample_id), path(unaligned_bam), path(decoys_bam)
+    path hostdir
 
     output:
     tuple val(sample_id), path("bams/${sample_id}.qcfilt_paired.bam"),   emit: paired
@@ -29,7 +30,7 @@ process QCFILTER {
         --input-decoys    $decoys_bam \\
         --sample-id $sample_id \\
         --outdir . \\
-        --hostdir ${params.hostdir} \\
+        --hostdir ${hostdir} \\
         --threads $task.cpus \\
         --ram-gb $ram
     """

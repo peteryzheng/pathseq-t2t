@@ -5,6 +5,8 @@ process T2TFILTER {
 
     input:
     tuple val(sample_id), path(paired_bam), path(unpaired_bam)
+    path reference
+    path ref_index
 
     output:
     tuple val(sample_id), path("bams/${sample_id}.t2tfilt_paired.bam"),   emit: paired
@@ -29,7 +31,7 @@ process T2TFILTER {
         --input-unpaired $unpaired_bam \\
         --sample-id $sample_id \\
         --outdir . \\
-        --reference ${params.reference} \\
+        --reference ${reference} \\
         $decoys_arg \\
         --threads $task.cpus
     """

@@ -1,7 +1,8 @@
 nextflow.enable.dsl = 2
 
-include { DOWNLOAD_HG38      } from './modules/cram_to_bam'
-include { CRAM_TO_BAM        } from './modules/cram_to_bam'
+include { DOWNLOAD_HG38                                   } from './modules/cram_to_bam'
+include { CRAM_TO_BAM                                     } from './modules/cram_to_bam'
+include { DOWNLOAD_REFERENCE; DOWNLOAD_HOST_INDEX; DOWNLOAD_KRAKEN_DB } from './modules/download_refs'
 include { PREFILTER          } from './modules/prefilter'
 include { QCFILTER           } from './modules/qcfilter'
 include { T2TFILTER          } from './modules/t2tfilter'
@@ -18,12 +19,9 @@ workflow {
 
     // ── Param validation ───────────────────────────────────────────────────────
     if (!params.samplesheet) error "Required: --samplesheet <csv>"
-    if (!params.hostdir)     error "Required: --hostdir <dir>"
-    if (!params.reference)   error "Required: --reference <t2t.fa>"
 
     def classifiers = params.classifiers.tokenize(',')*.trim()*.toLowerCase()
 
-    if ('kraken'    in classifiers && !params.kraken_index)    error "'kraken' in --classifiers but --kraken_index not set"
     if ('metaphlan' in classifiers && !params.metaphlan_index) error "'metaphlan' in --classifiers but --metaphlan_index not set"
     if ('metaphlan' in classifiers && !params.bowtie2_index)   error "'metaphlan' in --classifiers but --bowtie2_index not set"
     if ('sylph'     in classifiers && !params.sylph_index)     error "'sylph' in --classifiers but --sylph_index not set"
@@ -51,15 +49,38 @@ workflow {
     CRAM_TO_BAM(ch_by_type.cram, ch_hg38_ref)
     ch_inputs = ch_by_type.bam.mix(CRAM_TO_BAM.out.bam)
 
+    // ── Reference data (auto-download once if not provided) ───────────────────
+    // T2T FASTA + BWA index (staged together so bwa finds the index alongside the FASTA)
+    if (params.reference) {
+        ch_reference = Channel.value(file(params.reference, checkIfExists: true))
+        ch_ref_index = Channel.value(
+            ["${params.reference}.amb", "${params.reference}.ann",
+             "${params.reference}.bwt", "${params.reference}.pac",
+             "${params.reference}.sa",  "${params.reference}.fai"
+            ].collect { file(it) })
+    } else {
+        def dl_ref   = DOWNLOAD_REFERENCE()
+        ch_reference = dl_ref.fasta
+        ch_ref_index = dl_ref.index
+    }
+
+    // PathSeq host index directory
+    ch_hostdir = params.hostdir
+        ? Channel.value(file(params.hostdir, checkIfExists: true))
+        : DOWNLOAD_HOST_INDEX().dir
+
     // ── Filtering pipeline ─────────────────────────────────────────────────────
     PREFILTER(ch_inputs)
 
     QCFILTER(
-        PREFILTER.out.unaligned.join(PREFILTER.out.decoys)
+        PREFILTER.out.unaligned.join(PREFILTER.out.decoys),
+        ch_hostdir
     )
 
     T2TFILTER(
-        QCFILTER.out.paired.join(QCFILTER.out.unpaired)
+        QCFILTER.out.paired.join(QCFILTER.out.unpaired),
+        ch_reference,
+        ch_ref_index
     )
 
     ch_filtered = T2TFILTER.out.paired.join(T2TFILTER.out.unpaired)
@@ -67,12 +88,15 @@ workflow {
     // ── Classification (parallel) ──────────────────────────────────────────────
     // Classifier report channels: emit [sample_id, [file1, file2]] (or [] when not run).
     // Placeholder channels provide empty lists so the SUMMARIZE join always resolves.
-    ch_kraken_reports   = ch_samples.map { sid, _ -> [sid, []] }
+    ch_kraken_reports    = ch_samples.map { sid, _ -> [sid, []] }
     ch_metaphlan_reports = ch_samples.map { sid, _ -> [sid, []] }
-    ch_sylph_reports    = ch_samples.map { sid, _ -> [sid, []] }
+    ch_sylph_reports     = ch_samples.map { sid, _ -> [sid, []] }
 
     if ('kraken' in classifiers) {
-        CLASSIFY_KRAKEN(ch_filtered)
+        ch_kraken_db = params.kraken_index
+            ? Channel.value(file(params.kraken_index, checkIfExists: true))
+            : DOWNLOAD_KRAKEN_DB().dir
+        CLASSIFY_KRAKEN(ch_filtered, ch_kraken_db)
         ch_kraken_reports = CLASSIFY_KRAKEN.out.report_paired
             .join(CLASSIFY_KRAKEN.out.report_unpaired)
             .map { sid, rp, ru -> [sid, [rp, ru]] }

@@ -9,6 +9,7 @@ process CLASSIFY_KRAKEN {
 
     input:
     tuple val(sample_id), path(paired_bam), path(unpaired_bam)
+    path kraken_db
 
     output:
     tuple val(sample_id), path("classification_stats/${sample_id}.paired.kraken.report.txt"),   emit: report_paired
@@ -29,7 +30,7 @@ process CLASSIFY_KRAKEN {
         --input-unpaired $unpaired_bam \\
         --sample-id $sample_id \\
         --outdir . \\
-        --kraken-index ${params.kraken_index} \\
+        --kraken-index ${kraken_db} \\
         --threads $task.cpus
     """
 }
