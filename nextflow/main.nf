@@ -1,5 +1,7 @@
 nextflow.enable.dsl = 2
 
+include { DOWNLOAD_HG38      } from './modules/cram_to_bam'
+include { CRAM_TO_BAM        } from './modules/cram_to_bam'
 include { PREFILTER          } from './modules/prefilter'
 include { QCFILTER           } from './modules/qcfilter'
 include { T2TFILTER          } from './modules/t2tfilter'
@@ -36,8 +38,21 @@ workflow {
             tuple(row.sample_id, file(row.bam, checkIfExists: true))
         }
 
+    // ── CRAM → BAM conversion (auto-detected by extension) ────────────────────
+    ch_samples.branch {
+        cram: it[1].name.endsWith('.cram')
+        bam:  true
+    }.set { ch_by_type }
+
+    ch_hg38_ref = params.hg38_ref
+        ? Channel.value(file(params.hg38_ref, checkIfExists: true))
+        : DOWNLOAD_HG38(ch_by_type.cram.first().map { "fetch" }).ref
+
+    CRAM_TO_BAM(ch_by_type.cram, ch_hg38_ref)
+    ch_inputs = ch_by_type.bam.mix(CRAM_TO_BAM.out.bam)
+
     // ── Filtering pipeline ─────────────────────────────────────────────────────
-    PREFILTER(ch_samples)
+    PREFILTER(ch_inputs)
 
     QCFILTER(
         PREFILTER.out.unaligned.join(PREFILTER.out.decoys)
