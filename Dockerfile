@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5-ubuntu22.04
+FROM mambaorg/micromamba:2.3.2-ubuntu22.04
 
 LABEL org.opencontainers.image.title="pathseq-t2t" \
       org.opencontainers.image.description="Host-subtraction and microbial profiling pipeline" \
