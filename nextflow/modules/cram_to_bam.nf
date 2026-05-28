@@ -27,7 +27,6 @@ process DOWNLOAD_HG38 {
 
 process CRAM_TO_BAM {
     tag "${meta.id}"
-    publishDir "${params.outdir}/${meta.id}/bams", mode: 'copy'
 
     input:
     tuple val(meta), path(cram)

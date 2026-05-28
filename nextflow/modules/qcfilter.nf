@@ -1,8 +1,6 @@
 process QCFILTER {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
-
     input:
     tuple val(meta), path(unaligned_bam), path(decoys_bam)
     path hostdir

@@ -1,8 +1,6 @@
 process PREFILTER {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
-
     input:
     tuple val(meta), path(bam)
 

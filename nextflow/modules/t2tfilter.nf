@@ -1,8 +1,6 @@
 process T2TFILTER {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
-
     input:
     tuple val(meta), path(paired_bam), path(unpaired_bam)
     path reference

@@ -6,7 +6,7 @@ PROG="pathseq-t2t"
 VERSION="0.3.0"
 
 # Load libs if present
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="${SCRIPT_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)}"
 LIB_DIR="${SCRIPT_DIR%/src}/lib"
 [ -f "${LIB_DIR}/logging.sh" ] && . "${LIB_DIR}/logging.sh"
 [ -f "${LIB_DIR}/utils.sh" ] && . "${LIB_DIR}/utils.sh"
