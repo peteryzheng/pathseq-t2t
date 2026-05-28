@@ -175,11 +175,6 @@
       "fa_icon": "fab fa-aws",
       "description": "Required when using -profile aws.",
       "properties": {
-        "docker_image": {
-          "type": "string",
-          "description": "Docker image URI for all processes.",
-          "fa_icon": "fab fa-docker"
-        },
         "aws_queue": {
           "type": "string",
           "description": "AWS Batch job queue ARN or name.",
@@ -218,11 +213,6 @@
           "type": "string",
           "description": "Extra #SBATCH flags, e.g. --constraint=cascade.",
           "fa_icon": "fas fa-sliders-h"
-        },
-        "singularity_image": {
-          "type": "string",
-          "description": "Singularity .sif path or docker:// URI for all processes.",
-          "fa_icon": "fas fa-box"
         }
       }
     },
