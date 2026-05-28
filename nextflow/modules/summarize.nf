@@ -3,12 +3,12 @@
 // Classifier report lists are empty ([]) when the classifier was not run.
 
 process SUMMARIZE {
-    tag "$sample_id"
+    tag "${meta.id}"
 
-    publishDir "${params.outdir}/${sample_id}/results", mode: 'copy'
+    publishDir "${params.outdir}/${meta.id}/results", mode: 'copy'
 
     input:
-    tuple val(sample_id),
+    tuple val(meta),
           path(flagstat),
           path(metrics_unaligned),
           path(metrics_decoys),
@@ -19,12 +19,12 @@ process SUMMARIZE {
           path(sylph_reports)        // [] or [report_paired, report_unpaired]
 
     output:
-    tuple val(sample_id), path("${sample_id}.summary.tsv"),    emit: summary
-    tuple val(sample_id), path("${sample_id}.*.txt", arity: '0..*'), emit: classifier_tables, optional: true
+    tuple val(meta), path("${meta.id}.summary.tsv"),    emit: summary
+    tuple val(meta), path("${meta.id}.*.txt", arity: '0..*'), emit: classifier_tables, optional: true
 
     stub:
     """
-    touch ${sample_id}.summary.tsv
+    touch ${meta.id}.summary.tsv
     """
 
     script:
@@ -42,7 +42,7 @@ process SUMMARIZE {
 
     """
     pathseq-t2t summarize \\
-        --sample-id $sample_id \\
+        --sample-id ${meta.id} \\
         --input-flagstat $flagstat \\
         --qcfilter-metrics-unaligned $metrics_unaligned \\
         --qcfilter-metrics-decoys    $metrics_decoys \\

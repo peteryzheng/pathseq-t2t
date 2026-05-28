@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/peteryzheng/pathseq-t2t/main/nextflow/nextflow_schema.json",
+  "title": "pathseq-t2t pipeline parameters",
+  "description": "Host-subtraction and microbial profiling pipeline using CHM13v2 T2T reference",
+  "type": "object",
+  "$defs": {
+    "input_output_options": {
+      "title": "Input/output options",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "Define where the pipeline should find input data and save output data.",
+      "required": ["samplesheet"],
+      "properties": {
+        "samplesheet": {
+          "type": "string",
+          "format": "file-path",
+          "exists": true,
+          "mimetype": "text/csv",
+          "description": "Path to CSV samplesheet with 'sample_id' and 'bam' columns.",
+          "fa_icon": "fas fa-file-csv"
+        },
+        "outdir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "Directory where results will be published.",
+          "default": "./results",
+          "fa_icon": "fas fa-folder-open"
+        }
+      }
+    },
+    "reference_options": {
+      "title": "Reference data options",
+      "type": "object",
+      "fa_icon": "fas fa-dna",
+      "description": "Paths to reference files (auto-downloaded on first run if not provided).",
+      "properties": {
+        "reference": {
+          "type": "string",
+          "description": "Path to CHM13v2 T2T FASTA. Auto-downloaded from UCSC if not set.",
+          "fa_icon": "fas fa-file"
+        },
+        "hostdir": {
+          "type": "string",
+          "description": "Directory containing PathSeq host index files. Auto-downloaded from GATK GCS if not set.",
+          "fa_icon": "fas fa-folder"
+        },
+        "hg38_ref": {
+          "type": "string",
+          "description": "hg38 FASTA for CRAM decoding. Auto-downloaded from UCSC if not set.",
+          "fa_icon": "fas fa-file"
+        },
+        "decoys_bed": {
+          "type": "string",
+          "description": "BED file of non-human decoy regions to mask.",
+          "fa_icon": "fas fa-file"
+        }
+      }
+    },
+    "pipeline_options": {
+      "title": "Pipeline options",
+      "type": "object",
+      "fa_icon": "fas fa-cogs",
+      "description": "Options controlling pipeline behavior.",
+      "properties": {
+        "aligner": {
+          "type": "string",
+          "default": "bwa",
+          "description": "Aligner to use for host subtraction.",
+          "enum": ["bwa", "dragen"],
+          "fa_icon": "fas fa-align-left"
+        },
+        "classifiers": {
+          "type": "string",
+          "default": "kraken",
+          "description": "Comma-separated list of classifiers to run: kraken, metaphlan, sylph.",
+          "fa_icon": "fas fa-list"
+        },
+        "assembly": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable metagenomic assembly pipeline (MEGAHIT + MetaBAT2 + CheckM2 + GTDB-Tk).",
+          "fa_icon": "fas fa-puzzle-piece"
+        }
+      }
+    },
+    "classifier_options": {
+      "title": "Classifier options",
+      "type": "object",
+      "fa_icon": "fas fa-microscope",
+      "description": "Classifier index paths and options.",
+      "properties": {
+        "kraken_index": {
+          "type": "string",
+          "description": "Path to Kraken2 database directory. Auto-downloaded (8GB standard DB) if not set.",
+          "fa_icon": "fas fa-folder"
+        },
+        "kraken_db_url": {
+          "type": "string",
+          "default": "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_08gb_20240605.tar.gz",
+          "description": "URL for Kraken2 database tarball (used when auto-downloading). See https://benlangmead.github.io/aws-indexes/k2",
+          "fa_icon": "fas fa-link"
+        },
+        "metaphlan_index": {
+          "type": "string",
+          "description": "MetaPhlAn database name, e.g. mpa_vJun23_CHOCOPhlAnSGB_202403.",
+          "fa_icon": "fas fa-database"
+        },
+        "bowtie2_index": {
+          "type": "string",
+          "description": "Directory containing MetaPhlAn Bowtie2 index files.",
+          "fa_icon": "fas fa-folder"
+        },
+        "sylph_index": {
+          "type": "string",
+          "description": "Path to Sylph database (.syldb file).",
+          "fa_icon": "fas fa-file"
+        },
+        "sylph_taxonomy": {
+          "type": "string",
+          "description": "Sylph taxonomy tag (see sylph-tax --help).",
+          "fa_icon": "fas fa-tags"
+        }
+      }
+    },
+    "assembly_options": {
+      "title": "Assembly options",
+      "type": "object",
+      "fa_icon": "fas fa-layer-group",
+      "description": "Optional paths required for assembly QC and classification.",
+      "properties": {
+        "checkv_db": {
+          "type": "string",
+          "description": "Path to CheckV database (required for binqc with --model checkv or both).",
+          "fa_icon": "fas fa-folder"
+        },
+        "gtdbtk_data": {
+          "type": "string",
+          "description": "Path to GTDB-Tk data directory (GTDBTK_DATA_PATH, required for binclassify).",
+          "fa_icon": "fas fa-folder"
+        }
+      }
+    },
+    "resource_limits": {
+      "title": "Resource limits",
+      "type": "object",
+      "fa_icon": "fas fa-server",
+      "description": "Maximum resource caps applied via check_max() in base.config.",
+      "properties": {
+        "max_cpus": {
+          "type": "integer",
+          "default": 16,
+          "description": "Maximum number of CPUs any single process can request.",
+          "fa_icon": "fas fa-microchip"
+        },
+        "max_memory": {
+          "type": "string",
+          "default": "128.GB",
+          "description": "Maximum memory any single process can request.",
+          "pattern": "^\\d+(\\.\\d+)?\\.?(B|KB|MB|GB|TB)$",
+          "fa_icon": "fas fa-memory"
+        },
+        "max_time": {
+          "type": "string",
+          "default": "240.h",
+          "description": "Maximum wall-time any single process can request.",
+          "pattern": "^(\\d+\\.?\\d*(s|m|h|d))+$",
+          "fa_icon": "fas fa-clock"
+        }
+      }
+    },
+    "aws_options": {
+      "title": "AWS Batch options",
+      "type": "object",
+      "fa_icon": "fab fa-aws",
+      "description": "Required when using -profile aws.",
+      "properties": {
+        "docker_image": {
+          "type": "string",
+          "description": "Docker image URI for all processes.",
+          "fa_icon": "fab fa-docker"
+        },
+        "aws_queue": {
+          "type": "string",
+          "description": "AWS Batch job queue ARN or name.",
+          "fa_icon": "fas fa-list-ol"
+        },
+        "aws_region": {
+          "type": "string",
+          "default": "us-east-1",
+          "description": "AWS region for Batch and S3.",
+          "fa_icon": "fas fa-globe"
+        },
+        "s3_work_dir": {
+          "type": "string",
+          "description": "S3 URI for Nextflow work directory, e.g. s3://my-bucket/work.",
+          "fa_icon": "fas fa-cloud"
+        }
+      }
+    },
+    "slurm_options": {
+      "title": "SLURM options",
+      "type": "object",
+      "fa_icon": "fas fa-server",
+      "description": "Used with -profile slurm.",
+      "properties": {
+        "slurm_queue": {
+          "type": "string",
+          "description": "SLURM partition name, e.g. short, normal, bigmem.",
+          "fa_icon": "fas fa-list"
+        },
+        "slurm_account": {
+          "type": "string",
+          "description": "SLURM account / project for job accounting.",
+          "fa_icon": "fas fa-user"
+        },
+        "slurm_options": {
+          "type": "string",
+          "description": "Extra #SBATCH flags, e.g. --constraint=cascade.",
+          "fa_icon": "fas fa-sliders-h"
+        },
+        "singularity_image": {
+          "type": "string",
+          "description": "Singularity .sif path or docker:// URI for all processes.",
+          "fa_icon": "fas fa-box"
+        }
+      }
+    },
+    "generic_options": {
+      "title": "Generic options",
+      "type": "object",
+      "fa_icon": "fas fa-file-import",
+      "description": "Less common options for the pipeline.",
+      "properties": {
+        "help": {
+          "type": "boolean",
+          "default": false,
+          "description": "Display help text and exit.",
+          "fa_icon": "fas fa-question-circle",
+          "hidden": true
+        }
+      }
+    }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/input_output_options" },
+    { "$ref": "#/$defs/reference_options" },
+    { "$ref": "#/$defs/pipeline_options" },
+    { "$ref": "#/$defs/classifier_options" },
+    { "$ref": "#/$defs/assembly_options" },
+    { "$ref": "#/$defs/resource_limits" },
+    { "$ref": "#/$defs/aws_options" },
+    { "$ref": "#/$defs/slurm_options" },
+    { "$ref": "#/$defs/generic_options" }
+  ]
+}

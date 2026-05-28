@@ -1,24 +1,20 @@
 nextflow.enable.dsl = 2
 
-include { DOWNLOAD_HG38                                   } from './modules/cram_to_bam'
-include { CRAM_TO_BAM                                     } from './modules/cram_to_bam'
-include { DOWNLOAD_REFERENCE; DOWNLOAD_HOST_INDEX; DOWNLOAD_KRAKEN_DB } from './modules/download_refs'
-include { PREFILTER          } from './modules/prefilter'
-include { QCFILTER           } from './modules/qcfilter'
-include { T2TFILTER          } from './modules/t2tfilter'
-include { CLASSIFY_KRAKEN    } from './modules/classify'
-include { CLASSIFY_METAPHLAN } from './modules/classify'
-include { CLASSIFY_SYLPH     } from './modules/classify'
+include { validateParameters } from 'plugin/nf-schema'
+
+include { DOWNLOAD_HG38; CRAM_TO_BAM                                      } from './modules/cram_to_bam'
+include { DOWNLOAD_REFERENCE; DOWNLOAD_HOST_INDEX; DOWNLOAD_KRAKEN_DB     } from './modules/download_refs'
+include { SUMMARIZE          } from './modules/summarize'
+include { SUMMARIZE_ASSEMBLY } from './modules/summarize_assembly'
+include { FILTER             } from './subworkflows/local/filter'
+include { CLASSIFY           } from './subworkflows/local/classify'
 include { ASSEMBLE           } from './modules/assemble'
 include { BINQC              } from './modules/binqc'
 include { BINCLASSIFY        } from './modules/binclassify'
-include { SUMMARIZE          } from './modules/summarize'
-include { SUMMARIZE_ASSEMBLY } from './modules/summarize_assembly'
 
 workflow {
 
-    // ── Param validation ───────────────────────────────────────────────────────
-    if (!params.samplesheet) error "Required: --samplesheet <csv>"
+    validateParameters()
 
     def classifiers = params.classifiers.tokenize(',')*.trim()*.toLowerCase()
 
@@ -33,7 +29,8 @@ workflow {
         .map { row ->
             if (!row.sample_id) error "Samplesheet row missing 'sample_id' column"
             if (!row.bam)       error "Samplesheet row missing 'bam' column"
-            tuple(row.sample_id, file(row.bam, checkIfExists: true))
+            def meta = [id: row.sample_id]
+            tuple(meta, file(row.bam, checkIfExists: true))
         }
 
     // ── CRAM → BAM conversion (auto-detected by extension) ────────────────────
@@ -50,7 +47,6 @@ workflow {
     ch_inputs = ch_by_type.bam.mix(CRAM_TO_BAM.out.bam)
 
     // ── Reference data (auto-download once if not provided) ───────────────────
-    // T2T FASTA + BWA index (staged together so bwa finds the index alongside the FASTA)
     if (params.reference) {
         ch_reference = Channel.value(file(params.reference, checkIfExists: true))
         ch_ref_index = Channel.value(
@@ -64,82 +60,37 @@ workflow {
         ch_ref_index = dl_ref.index
     }
 
-    // PathSeq host index directory
     ch_hostdir = params.hostdir
         ? Channel.value(file(params.hostdir, checkIfExists: true))
         : DOWNLOAD_HOST_INDEX().dir
 
-    // ── Filtering pipeline ─────────────────────────────────────────────────────
-    PREFILTER(ch_inputs)
-
-    QCFILTER(
-        PREFILTER.out.unaligned.join(PREFILTER.out.decoys),
-        ch_hostdir
-    )
-
-    T2TFILTER(
-        QCFILTER.out.paired.join(QCFILTER.out.unpaired),
-        ch_reference,
-        ch_ref_index
-    )
-
-    ch_filtered = T2TFILTER.out.paired.join(T2TFILTER.out.unpaired)
-
-    // ── Classification (parallel) ──────────────────────────────────────────────
-    // Classifier report channels: emit [sample_id, [file1, file2]] (or [] when not run).
-    // Placeholder channels provide empty lists so the SUMMARIZE join always resolves.
-    ch_kraken_reports    = ch_samples.map { sid, _ -> [sid, []] }
-    ch_metaphlan_reports = ch_samples.map { sid, _ -> [sid, []] }
-    ch_sylph_reports     = ch_samples.map { sid, _ -> [sid, []] }
-
-    if ('kraken' in classifiers) {
-        ch_kraken_db = params.kraken_index
+    ch_kraken_db = ('kraken' in classifiers)
+        ? (params.kraken_index
             ? Channel.value(file(params.kraken_index, checkIfExists: true))
-            : DOWNLOAD_KRAKEN_DB().dir
-        CLASSIFY_KRAKEN(ch_filtered, ch_kraken_db)
-        ch_kraken_reports = CLASSIFY_KRAKEN.out.report_paired
-            .join(CLASSIFY_KRAKEN.out.report_unpaired)
-            .map { sid, rp, ru -> [sid, [rp, ru]] }
-    }
+            : DOWNLOAD_KRAKEN_DB().dir)
+        : Channel.value([])
 
-    if ('metaphlan' in classifiers) {
-        CLASSIFY_METAPHLAN(ch_filtered)
-        ch_metaphlan_reports = CLASSIFY_METAPHLAN.out.report
-            .map { sid, r -> [sid, [r]] }
-    }
+    // ── Filtering subworkflow ─────────────────────────────────────────────────
+    FILTER(ch_inputs, ch_hostdir, ch_reference, ch_ref_index)
 
-    if ('sylph' in classifiers) {
-        CLASSIFY_SYLPH(ch_filtered)
-        ch_sylph_reports = CLASSIFY_SYLPH.out.report_paired
-            .join(CLASSIFY_SYLPH.out.report_unpaired)
-            .map { sid, rp, ru -> [sid, [rp, ru]] }
-    }
+    // ── Classification subworkflow ────────────────────────────────────────────
+    CLASSIFY(FILTER.out.filtered, classifiers, ch_kraken_db)
 
     // ── Summarize filtering + classification ───────────────────────────────────
-    ch_filter_stats = PREFILTER.out.flagstat
-        .join(QCFILTER.out.metrics_unaligned)
-        .join(QCFILTER.out.metrics_decoys)
-        .join(T2TFILTER.out.flagstat_paired)
-        .join(T2TFILTER.out.flagstat_unpaired)
-
     SUMMARIZE(
-        ch_filter_stats
-            .join(ch_kraken_reports)
-            .join(ch_metaphlan_reports)
-            .join(ch_sylph_reports)
+        FILTER.out.flagstat
+            .join(CLASSIFY.out.kraken_reports)
+            .join(CLASSIFY.out.metaphlan_reports)
+            .join(CLASSIFY.out.sylph_reports)
     )
 
     // ── Assembly pipeline (optional, enabled with --assembly) ──────────────────
     if (params.assembly) {
-        ASSEMBLE(
-            PREFILTER.out.unaligned.join(PREFILTER.out.decoys)
-        )
+        ASSEMBLE(FILTER.out.unaligned.join(FILTER.out.decoys))
 
-        // BINQC and BINCLASSIFY run in parallel on the assembled bins.
         BINQC(ASSEMBLE.out.dir)
         BINCLASSIFY(ASSEMBLE.out.dir)
 
-        // SUMMARIZE_ASSEMBLY waits for all three assembly steps via explicit join.
         SUMMARIZE_ASSEMBLY(
             ASSEMBLE.out.dir
                 .join(BINQC.out.complete)
