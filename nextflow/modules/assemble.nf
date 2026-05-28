@@ -1,18 +1,18 @@
 process ASSEMBLE {
-    tag "$sample_id"
+    tag "${meta.id}"
 
-    publishDir "${params.outdir}/${sample_id}", mode: 'copy'
+    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(unaligned_bam), path(decoys_bam)
+    tuple val(meta), path(unaligned_bam), path(decoys_bam)
 
     output:
-    tuple val(sample_id), path("assembly/${sample_id}"), emit: dir
+    tuple val(meta), path("assembly/${meta.id}"), emit: dir
 
     stub:
     """
-    mkdir -p assembly/${sample_id}/metabat2_bins
-    touch assembly/${sample_id}/final.contigs.fa
+    mkdir -p assembly/${meta.id}/metabat2_bins
+    touch assembly/${meta.id}/final.contigs.fa
     """
 
     script:
@@ -20,7 +20,7 @@ process ASSEMBLE {
     pathseq-t2t assemble \\
         --input-unaligned $unaligned_bam \\
         --input-decoys    $decoys_bam \\
-        --sample-id $sample_id \\
+        --sample-id ${meta.id} \\
         --outdir . \\
         --threads $task.cpus
     """

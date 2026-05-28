@@ -3,23 +3,23 @@
 // is handled internally by the CLI.
 
 process CLASSIFY_KRAKEN {
-    tag "$sample_id"
+    tag "${meta.id}"
 
-    publishDir "${params.outdir}/${sample_id}", mode: 'copy'
+    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(paired_bam), path(unpaired_bam)
+    tuple val(meta), path(paired_bam), path(unpaired_bam)
     path kraken_db
 
     output:
-    tuple val(sample_id), path("classification_stats/${sample_id}.paired.kraken.report.txt"),   emit: report_paired
-    tuple val(sample_id), path("classification_stats/${sample_id}.unpaired.kraken.report.txt"), emit: report_unpaired
+    tuple val(meta), path("classification_stats/${meta.id}.paired.kraken.report.txt"),   emit: report_paired
+    tuple val(meta), path("classification_stats/${meta.id}.unpaired.kraken.report.txt"), emit: report_unpaired
 
     stub:
     """
     mkdir -p classification_stats
-    touch classification_stats/${sample_id}.paired.kraken.report.txt
-    touch classification_stats/${sample_id}.unpaired.kraken.report.txt
+    touch classification_stats/${meta.id}.paired.kraken.report.txt
+    touch classification_stats/${meta.id}.unpaired.kraken.report.txt
     """
 
     script:
@@ -28,7 +28,7 @@ process CLASSIFY_KRAKEN {
         --classifiers kraken \\
         --input-paired   $paired_bam \\
         --input-unpaired $unpaired_bam \\
-        --sample-id $sample_id \\
+        --sample-id ${meta.id} \\
         --outdir . \\
         --kraken-index ${kraken_db} \\
         --threads $task.cpus
@@ -36,20 +36,20 @@ process CLASSIFY_KRAKEN {
 }
 
 process CLASSIFY_METAPHLAN {
-    tag "$sample_id"
+    tag "${meta.id}"
 
-    publishDir "${params.outdir}/${sample_id}", mode: 'copy'
+    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(paired_bam), path(unpaired_bam)
+    tuple val(meta), path(paired_bam), path(unpaired_bam)
 
     output:
-    tuple val(sample_id), path("classification_stats/${sample_id}.metaphlan.report.txt"), emit: report
+    tuple val(meta), path("classification_stats/${meta.id}.metaphlan.report.txt"), emit: report
 
     stub:
     """
     mkdir -p classification_stats
-    touch classification_stats/${sample_id}.metaphlan.report.txt
+    touch classification_stats/${meta.id}.metaphlan.report.txt
     """
 
     script:
@@ -58,7 +58,7 @@ process CLASSIFY_METAPHLAN {
         --classifiers metaphlan \\
         --input-paired   $paired_bam \\
         --input-unpaired $unpaired_bam \\
-        --sample-id $sample_id \\
+        --sample-id ${meta.id} \\
         --outdir . \\
         --metaphlan-index ${params.metaphlan_index} \\
         --bowtie2-index   ${params.bowtie2_index} \\
@@ -67,22 +67,22 @@ process CLASSIFY_METAPHLAN {
 }
 
 process CLASSIFY_SYLPH {
-    tag "$sample_id"
+    tag "${meta.id}"
 
-    publishDir "${params.outdir}/${sample_id}", mode: 'copy'
+    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(paired_bam), path(unpaired_bam)
+    tuple val(meta), path(paired_bam), path(unpaired_bam)
 
     output:
-    tuple val(sample_id), path("classification_stats/${sample_id}.paired.taxonomy.txt"),   emit: report_paired
-    tuple val(sample_id), path("classification_stats/${sample_id}.unpaired.taxonomy.txt"), emit: report_unpaired
+    tuple val(meta), path("classification_stats/${meta.id}.paired.taxonomy.txt"),   emit: report_paired
+    tuple val(meta), path("classification_stats/${meta.id}.unpaired.taxonomy.txt"), emit: report_unpaired
 
     stub:
     """
     mkdir -p classification_stats
-    touch classification_stats/${sample_id}.paired.taxonomy.txt
-    touch classification_stats/${sample_id}.unpaired.taxonomy.txt
+    touch classification_stats/${meta.id}.paired.taxonomy.txt
+    touch classification_stats/${meta.id}.unpaired.taxonomy.txt
     """
 
     script:
@@ -92,7 +92,7 @@ process CLASSIFY_SYLPH {
         --classifiers sylph \\
         --input-paired   $paired_bam \\
         --input-unpaired $unpaired_bam \\
-        --sample-id $sample_id \\
+        --sample-id ${meta.id} \\
         --outdir . \\
         --sylph-index ${params.sylph_index} \\
         $tax_arg \\

@@ -1,22 +1,22 @@
 process PREFILTER {
-    tag "$sample_id"
+    tag "${meta.id}"
 
-    publishDir "${params.outdir}/${sample_id}", mode: 'copy'
+    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(bam)
+    tuple val(meta), path(bam)
 
     output:
-    tuple val(sample_id), path("bams/${sample_id}.prefilter.unaligned.bam"), emit: unaligned
-    tuple val(sample_id), path("bams/${sample_id}.prefilter.decoys.bam"),    emit: decoys
-    tuple val(sample_id), path("filter_stats/${sample_id}.flagstat.tsv"),    emit: flagstat
+    tuple val(meta), path("bams/${meta.id}.prefilter.unaligned.bam"), emit: unaligned
+    tuple val(meta), path("bams/${meta.id}.prefilter.decoys.bam"),    emit: decoys
+    tuple val(meta), path("filter_stats/${meta.id}.flagstat.tsv"),    emit: flagstat
 
     stub:
     """
     mkdir -p bams filter_stats
-    touch bams/${sample_id}.prefilter.unaligned.bam
-    touch bams/${sample_id}.prefilter.decoys.bam
-    touch filter_stats/${sample_id}.flagstat.tsv
+    touch bams/${meta.id}.prefilter.unaligned.bam
+    touch bams/${meta.id}.prefilter.decoys.bam
+    touch filter_stats/${meta.id}.flagstat.tsv
     """
 
     script:
@@ -26,7 +26,7 @@ process PREFILTER {
         --input-bam $bam \\
         --aligner ${params.aligner} \\
         $decoys_arg \\
-        --sample-id $sample_id \\
+        --sample-id ${meta.id} \\
         --outdir . \\
         --threads $task.cpus
     """

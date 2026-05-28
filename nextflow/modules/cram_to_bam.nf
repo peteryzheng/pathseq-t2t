@@ -24,25 +24,25 @@ process DOWNLOAD_HG38 {
 }
 
 process CRAM_TO_BAM {
-    tag "$sample_id"
-    publishDir "${params.outdir}/${sample_id}/bams", mode: 'copy'
+    tag "${meta.id}"
+    publishDir "${params.outdir}/${meta.id}/bams", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(cram)
+    tuple val(meta), path(cram)
     path hg38_ref
 
     output:
-    tuple val(sample_id), path("${sample_id}.bam"),     emit: bam
-    tuple val(sample_id), path("${sample_id}.bam.bai"), emit: bai
+    tuple val(meta), path("${meta.id}.bam"),     emit: bam
+    tuple val(meta), path("${meta.id}.bam.bai"), emit: bai
 
     stub:
     """
-    touch ${sample_id}.bam ${sample_id}.bam.bai
+    touch ${meta.id}.bam ${meta.id}.bam.bai
     """
 
     script:
     """
-    samtools view -@ ${task.cpus} -b -T ${hg38_ref} -o ${sample_id}.bam ${cram}
-    samtools index ${sample_id}.bam
+    samtools view -@ ${task.cpus} -b -T ${hg38_ref} -o ${meta.id}.bam ${cram}
+    samtools index ${meta.id}.bam
     """
 }
