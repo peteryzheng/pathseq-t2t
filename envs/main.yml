@@ -16,7 +16,5 @@ dependencies:
   - metabat2
   - kraken2
   - sylph>=0.9.0
+  - sylph-tax
   - pigz
-  - pip
-  - pip:
-      - sylph-tax
