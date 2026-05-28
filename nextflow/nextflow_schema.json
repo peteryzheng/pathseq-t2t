@@ -47,7 +47,7 @@
         },
         "hg38_ref": {
           "type": "string",
-          "description": "hg38 FASTA for CRAM decoding. Auto-downloaded from UCSC if not set.",
+          "description": "GATK.GRCh38 FASTA for CRAM decoding. Must match the CRAM reference; Broad/GATK Homo_sapiens_assembly38.fasta is auto-downloaded if not set.",
           "fa_icon": "fas fa-file"
         },
         "decoys_bed": {

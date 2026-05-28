@@ -73,6 +73,7 @@ Additional dependencies for `binclassify`:
   - `pathseq_host.bfi`
   - `pathseq_host.fa.img`
 - T2T FASTA (`--reference` or `$T2TREF`) for `t2tfilter`
+- CRAM decoding defaults to the Broad/GATK `Homo_sapiens_assembly38.fasta` reference. If overriding with `--hg38_ref`, provide the FASTA that matches the CRAM header/reference MD5s.
 - Kraken2 database for Kraken (`--kraken-index` or `$KRAKEN_INDEX`)
 - MetaPhlAn index name and Bowtie2 index dir for MetaPhlAn (`--metaphlan-index` / `--bowtie2-index` or env vars)
 - Sylph `.syldb` file(s) and taxonomy tag(s) for Sylph mode
@@ -113,6 +114,7 @@ pathseq-t2t summarize-assembly --sample-id sample --outdir ./pst2t_out \
 
 Run steps separately on HPC when possible. CPU guidance: 1 CPU per 4 GB RAM (minimum 4).
 Wall-times are empirical estimates from TCGA WGS samples (low-biomass); higher-biomass samples may take longer.
+The Nextflow pipeline retries likely transient/resource failures twice, doubling requested memory and wall-time on each retry while respecting configured `max_memory` and `max_time` caps.
 
 | Step | Suggested RAM | Suggested CPUs | Expected wall-time |
 |------|--------------|----------------|--------------------|

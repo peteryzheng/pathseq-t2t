@@ -1,7 +1,7 @@
-// Downloads hg38 from UCSC and indexes it. Runs at most once per pipeline
-// invocation; storeDir caches the result so re-runs skip the download.
+// Downloads the Broad/GATK GRCh38 bundle reference for CRAM decoding.
+// Runs at most once per pipeline invocation; storeDir caches the result.
 process DOWNLOAD_HG38 {
-    storeDir "${params.outdir}/_ref_cache/hg38"
+    storeDir "${params.outdir}/_ref_cache/hg38_gatk"
 
     input:
     val trigger
@@ -9,17 +9,19 @@ process DOWNLOAD_HG38 {
     output:
     path "hg38.fa",     emit: ref
     path "hg38.fa.fai", emit: fai
+    path "hg38.dict",   emit: dict
 
     stub:
     """
-    touch hg38.fa hg38.fa.fai
+    touch hg38.fa hg38.fa.fai hg38.dict
     """
 
     script:
     """
-    curl -L https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
-        | gzip -d > hg38.fa
-    samtools faidx hg38.fa
+    base_url="https://storage.googleapis.com/gcp-public-data--broad-references/hg38/v0"
+    curl -fL "\${base_url}/Homo_sapiens_assembly38.fasta" -o hg38.fa
+    curl -fL "\${base_url}/Homo_sapiens_assembly38.fasta.fai" -o hg38.fa.fai
+    curl -fL "\${base_url}/Homo_sapiens_assembly38.dict" -o hg38.dict
     """
 }
 
