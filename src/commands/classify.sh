@@ -309,12 +309,12 @@ Proceeding with all provided indexes and taxonomy tags."
         die "Failed to create paired FASTQs from ${input_paired}"
       fi
     else
-      if ! JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
-        time picard SamToFastq \
+      if ! { time JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
+        picard SamToFastq \
         --INPUT "${input_paired}" \
         --FASTQ "${fastq_r1}" \
         --SECOND_END_FASTQ "${fastq_r2}" \
-        --VALIDATION_STRINGENCY LENIENT ; then
+        --VALIDATION_STRINGENCY LENIENT ; } ; then
         log "ERROR: Picard SamToFastq (paired) failed; cleaning up partial FASTQs."
         rm -f "${fastq_r1}" "${fastq_r2}"
         die "Failed to create paired FASTQs from ${input_paired}"
@@ -348,11 +348,11 @@ Proceeding with all provided indexes and taxonomy tags."
           die "Failed to create unpaired FASTQ from ${input_unpaired}"
         fi
       else
-        if ! JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
-          time picard SamToFastq \
+        if ! { time JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
+          picard SamToFastq \
           --INPUT "${input_unpaired}" \
           --FASTQ "${fastq_fu}" \
-          --VALIDATION_STRINGENCY SILENT ; then
+          --VALIDATION_STRINGENCY SILENT ; } ; then
           log "ERROR: Picard SamToFastq (unpaired) failed; cleaning up partial FASTQ."
           rm -f "${fastq_fu}"
           die "Failed to create unpaired FASTQ from ${input_unpaired}"
