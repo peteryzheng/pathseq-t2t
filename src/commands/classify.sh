@@ -309,7 +309,7 @@ Proceeding with all provided indexes and taxonomy tags."
         die "Failed to create paired FASTQs from ${input_paired}"
       fi
     else
-      if ! env JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
+      if ! JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
         time picard SamToFastq \
         --INPUT "${input_paired}" \
         --FASTQ "${fastq_r1}" \
@@ -348,7 +348,7 @@ Proceeding with all provided indexes and taxonomy tags."
           die "Failed to create unpaired FASTQ from ${input_unpaired}"
         fi
       else
-        if ! env JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
+        if ! JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${_JAVA_OPTS}" \
           time picard SamToFastq \
           --INPUT "${input_unpaired}" \
           --FASTQ "${fastq_fu}" \
