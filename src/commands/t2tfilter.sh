@@ -228,12 +228,12 @@ HLP
       java -jar "${PICARD_JAR}" SamToFastq \
         --INPUT "${input_unpaired}" \
         --FASTQ "${fastq_u}" \
-        -VALIDATION_STRINGENCY SILENT
+        --VALIDATION_STRINGENCY SILENT
     else
       picard SamToFastq \
         --INPUT "${input_unpaired}" \
         --FASTQ "${fastq_u}" \
-        -VALIDATION_STRINGENCY SILENT
+        --VALIDATION_STRINGENCY SILENT
     fi
   fi
 
@@ -250,7 +250,7 @@ HLP
     log "[ Extracting paired unaligned reads ]"
     time samtools view -@ "${threads}" -bh "${bam_aligned_paired}" -f 3 -e '[AS]>35' \
       -U >(samtools view -@ "${threads}" -bh -F 2048 -x SA -x OQ -x MD -o "${output_paired}") \
-      -o >/dev/null #(samtools flagstat --output-fmt tsv - > "${flagstat_aligned_paired}")
+      -o /dev/null #(samtools flagstat --output-fmt tsv - > "${flagstat_aligned_paired}")
 
     if [[ -n "${decoys_to_mask}" ]]; then
       log "[ Extracting paired decoy-overlap reads for merge ]"
@@ -279,7 +279,7 @@ HLP
     log "[ Extracting unpaired unaligned reads ]"
     time samtools view -@ "${threads}" -bh "${bam_aligned_unpaired}" -e '[AS]>35' \
       -U >(samtools view -@ "${threads}" -bh -F 2048 -x SA -x OQ -x MD -o "${output_unpaired}") \
-      -o >/dev/null #(samtools flagstat --output-fmt tsv - > "${flagstat_aligned_unpaired}")
+      -o /dev/null #(samtools flagstat --output-fmt tsv - > "${flagstat_aligned_unpaired}")
 
     if [[ -n "${decoys_to_mask}" ]]; then
       log "[ Extracting unpaired decoy-overlap reads for merge ]"

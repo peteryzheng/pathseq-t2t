@@ -342,7 +342,7 @@ Proceeding with all provided indexes and taxonomy tags."
         if ! time java ${_JAVA_OPTS} -jar "${PICARD_JAR}" SamToFastq \
           --INPUT "${input_unpaired}" \
           --FASTQ "${fastq_fu}" \
-          -VALIDATION_STRINGENCY SILENT ; then
+          --VALIDATION_STRINGENCY SILENT ; then
           log "ERROR: Picard SamToFastq (unpaired) failed; cleaning up partial FASTQ."
           rm -f "${fastq_fu}"
           die "Failed to create unpaired FASTQ from ${input_unpaired}"
@@ -352,7 +352,7 @@ Proceeding with all provided indexes and taxonomy tags."
           time picard SamToFastq \
           --INPUT "${input_unpaired}" \
           --FASTQ "${fastq_fu}" \
-          -VALIDATION_STRINGENCY SILENT ; then
+          --VALIDATION_STRINGENCY SILENT ; then
           log "ERROR: Picard SamToFastq (unpaired) failed; cleaning up partial FASTQ."
           rm -f "${fastq_fu}"
           die "Failed to create unpaired FASTQ from ${input_unpaired}"
@@ -397,6 +397,9 @@ Proceeding with all provided indexes and taxonomy tags."
           --confidence 0.15 \
           --threads "${threads}" \
           "${kraken_args_ary[@]}"
+      else
+        printf "%%\t0\t0\t0\tunclassified\n" > "${k2_rep_unpaired}"
+        : > "${k2_out_unpaired}"
       fi
     fi
   fi

@@ -75,14 +75,14 @@ process CLASSIFY_SYLPH {
     tuple val(meta), path(paired_bam), path(unpaired_bam)
 
     output:
-    tuple val(meta), path("classification_stats/${meta.id}.paired.taxonomy.txt"),   emit: report_paired
-    tuple val(meta), path("classification_stats/${meta.id}.unpaired.taxonomy.txt"), emit: report_unpaired
+    tuple val(meta), path("classification_stats/${meta.id}.paired.sylph.report.txt"),   emit: report_paired
+    tuple val(meta), path("classification_stats/${meta.id}.unpaired.sylph.report.txt"), emit: report_unpaired
 
     stub:
     """
     mkdir -p classification_stats
-    touch classification_stats/${meta.id}.paired.taxonomy.txt
-    touch classification_stats/${meta.id}.unpaired.taxonomy.txt
+    touch classification_stats/${meta.id}.paired.sylph.report.txt
+    touch classification_stats/${meta.id}.unpaired.sylph.report.txt
     """
 
     script:
