@@ -7,7 +7,7 @@ process BINCLASSIFY {
     tuple val(meta), path(assembly_dir)
 
     output:
-    tuple val(meta), path("assembly/${meta.id}"), emit: complete
+    tuple val(meta), path("assembly/${meta.id}/gtdbtk_output"), emit: complete
 
     stub:
     """
@@ -20,6 +20,7 @@ process BINCLASSIFY {
     """
     $gtdbtk_env pathseq-t2t binclassify \\
         --sample-id ${meta.id} \\
+        --assembly-dir $assembly_dir \\
         --outdir . \\
         --threads $task.cpus
     """

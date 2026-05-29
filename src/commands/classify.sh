@@ -567,6 +567,11 @@ Proceeding with all provided indexes and taxonomy tags."
           [[ -f "${produced_u}" ]] || die "Sylph taxonomy (unpaired) not produced as expected."
           mv -f "${produced_u}" "${sylph_tax_unpaired}"
         fi
+      else
+        {
+          printf "#SampleID\t%s\tTaxonomies_used:[]\n" "${fastq_fu}"
+          printf "clade_name\trelative_abundance\tsequence_abundance\tANI (if strain-level)\tCoverage (if strain-level)\n"
+        } > "${sylph_tax_unpaired}"
       fi
     fi
   fi
