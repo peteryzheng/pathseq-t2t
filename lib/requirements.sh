@@ -57,14 +57,18 @@ _require_java17() {
 }
 
 _require_picard() {
-  if [[ -z "${PICARD_JAR}" || ! -f "${PICARD_JAR}" ]]; then
+  if [[ -n "${PICARD_JAR}" ]]; then
+    if [[ ! -f "${PICARD_JAR}" ]]; then
+      die "--picard-jar provided but file not found: ${PICARD_JAR}"
+    fi
+    log "Picard found at: ${PICARD_JAR}"
+  elif command -v picard >/dev/null 2>&1; then
+    log "Picard found on PATH: $(command -v picard)"
+  else
     die "--picard-jar not provided or invalid. You can download Picard from the following location:
       https://github.com/broadinstitute/picard/releases/latest
     Download the latest version and provide the path to the picard.jar file when running the script."
   fi
-  # Check if the provided Picard JAR file exists
-  require_file "${PICARD_JAR}"
-  log "Picard found at: ${PICARD_JAR}"
 }
 
 _require_bwa() {
