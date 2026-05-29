@@ -39,11 +39,17 @@ workflow {
         bam:  true
     }.set { ch_by_type }
 
-    ch_hg38_ref = params.hg38_ref
-        ? Channel.value(file(params.hg38_ref, checkIfExists: true))
-        : DOWNLOAD_HG38(ch_by_type.cram.first().map { "fetch" }).ref
+    def ch_hg38_ref, ch_hg38_fai
+    if (params.hg38_ref) {
+        ch_hg38_ref = Channel.value(file(params.hg38_ref,          checkIfExists: true))
+        ch_hg38_fai = Channel.value(file("${params.hg38_ref}.fai", checkIfExists: true))
+    } else {
+        def dl_hg38 = DOWNLOAD_HG38(ch_by_type.cram.first().map { "fetch" })
+        ch_hg38_ref = dl_hg38.ref
+        ch_hg38_fai = dl_hg38.fai
+    }
 
-    CRAM_TO_BAM(ch_by_type.cram, ch_hg38_ref)
+    CRAM_TO_BAM(ch_by_type.cram, ch_hg38_ref, ch_hg38_fai)
     ch_inputs = ch_by_type.bam.mix(CRAM_TO_BAM.out.bam)
 
     // ── Reference data (auto-download once if not provided) ───────────────────

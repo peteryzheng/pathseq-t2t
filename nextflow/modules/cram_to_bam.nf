@@ -1,8 +1,5 @@
 // Downloads the Broad/GATK GRCh38 bundle reference for CRAM decoding.
-// Runs at most once per pipeline invocation; storeDir caches the result.
 process DOWNLOAD_HG38 {
-    storeDir "${params.outdir}/_ref_cache/hg38_gatk"
-
     input:
     val trigger
 
@@ -31,6 +28,7 @@ process CRAM_TO_BAM {
     input:
     tuple val(meta), path(cram)
     path hg38_ref
+    path hg38_fai
 
     output:
     tuple val(meta), path("${meta.id}.bam"),     emit: bam
