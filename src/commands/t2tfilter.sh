@@ -260,7 +260,7 @@ HLP
       if [[ -s "${bam_decoys_paired}" ]]; then
         local tmp_merge_p="${output_paired}.tmp.merge.bam"
         log "[ Merging paired decoy-overlap reads into output ]"
-        time samtools cat -@ "${threads}" -o "${tmp_merge_p}" "${output_paired}" "${bam_decoys_paired}"
+        time samtools cat -o "${tmp_merge_p}" "${output_paired}" "${bam_decoys_paired}"
         mv -f "${tmp_merge_p}" "${output_paired}"
       fi
     fi
@@ -289,7 +289,7 @@ HLP
       if [[ -s "${bam_decoys_unpaired}" ]]; then
         local tmp_merge_u="${output_unpaired}.tmp.merge.bam"
         log "[ Merging unpaired decoy-overlap reads into output ]"
-        time samtools cat -@ "${threads}" -o "${tmp_merge_u}" "${output_unpaired}" "${bam_decoys_unpaired}"
+        time samtools cat -o "${tmp_merge_u}" "${output_unpaired}" "${bam_decoys_unpaired}"
         mv -f "${tmp_merge_u}" "${output_unpaired}"
       fi
     fi
