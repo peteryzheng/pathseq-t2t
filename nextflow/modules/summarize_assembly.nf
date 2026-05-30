@@ -1,8 +1,6 @@
 process SUMMARIZE_ASSEMBLY {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}/results", mode: 'copy'
-
     input:
     // Staged assembly_dir contains outputs from ASSEMBLE, BINQC, and BINCLASSIFY.
     // The three path inputs establish DAG dependencies on all three upstream processes.
