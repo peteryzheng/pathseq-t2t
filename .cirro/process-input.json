@@ -1,6 +1,5 @@
 {
   "outdir": "$.dataset.dataPath",
-  "samplesheet": "samplesheet.csv",
   "aligner": "$.dataset.params.aligner",
   "classifiers": "kraken",
   "kraken_db_url": "$.dataset.params.kraken_db_url"
