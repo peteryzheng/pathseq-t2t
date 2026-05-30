@@ -77,7 +77,11 @@ workflow {
         : Channel.value([])
 
     // ── Filtering subworkflow ─────────────────────────────────────────────────
-    FILTER(ch_inputs, ch_hostdir, ch_reference, ch_ref_index)
+    ch_decoys_bed = params.decoys_bed
+        ? Channel.value(file(params.decoys_bed, checkIfExists: true))
+        : Channel.value(file('NO_FILE'))
+
+    FILTER(ch_inputs, ch_hostdir, ch_reference, ch_ref_index, ch_decoys_bed)
 
     // ── Classification subworkflow ────────────────────────────────────────────
     CLASSIFY(FILTER.out.filtered, classifiers, ch_kraken_db)
