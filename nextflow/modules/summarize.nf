@@ -5,8 +5,6 @@
 process SUMMARIZE {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}/results", mode: 'copy'
-
     input:
     tuple val(meta),
           path(flagstat),

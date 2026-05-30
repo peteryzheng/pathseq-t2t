@@ -1,8 +1,6 @@
 process BINQC {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
-
     input:
     tuple val(meta), path(assembly_dir)
 

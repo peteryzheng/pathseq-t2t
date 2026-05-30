@@ -5,8 +5,6 @@
 process CLASSIFY_KRAKEN {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
-
     input:
     tuple val(meta), path(paired_bam), path(unpaired_bam)
     path kraken_db
@@ -38,8 +36,6 @@ process CLASSIFY_KRAKEN {
 process CLASSIFY_METAPHLAN {
     tag "${meta.id}"
 
-    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
-
     input:
     tuple val(meta), path(paired_bam), path(unpaired_bam)
 
@@ -68,8 +64,6 @@ process CLASSIFY_METAPHLAN {
 
 process CLASSIFY_SYLPH {
     tag "${meta.id}"
-
-    publishDir "${params.outdir}/${meta.id}", mode: 'copy'
 
     input:
     tuple val(meta), path(paired_bam), path(unpaired_bam)
