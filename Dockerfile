@@ -56,5 +56,4 @@ ENV PATH="/opt/conda/envs/main/bin:${PATH}" \
 RUN pathseq-t2t --version
 
 WORKDIR /data
-ENTRYPOINT ["pathseq-t2t"]
-CMD ["--help"]
+CMD ["pathseq-t2t", "--help"]
