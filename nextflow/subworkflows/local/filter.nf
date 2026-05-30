@@ -8,9 +8,10 @@ workflow FILTER {
     ch_hostdir     // channel: path
     ch_reference   // channel: path
     ch_ref_index   // channel: list<path>
+    ch_decoys_bed  // channel: path (or NO_FILE sentinel)
 
     main:
-    PREFILTER(ch_inputs)
+    PREFILTER(ch_inputs, ch_decoys_bed)
 
     QCFILTER(
         PREFILTER.out.unaligned.join(PREFILTER.out.decoys),

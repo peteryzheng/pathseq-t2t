@@ -3,6 +3,7 @@ process PREFILTER {
 
     input:
     tuple val(meta), path(bam)
+    path decoys_bed
 
     output:
     tuple val(meta), path("bams/${meta.id}.prefilter.unaligned.bam"), emit: unaligned
@@ -18,7 +19,7 @@ process PREFILTER {
     """
 
     script:
-    def decoys_arg = params.decoys_bed ? "--decoys-to-mask ${params.decoys_bed}" : "--decoys-to-mask None"
+    def decoys_arg = decoys_bed.name != 'NO_FILE' ? "--decoys-to-mask ${decoys_bed}" : "--decoys-to-mask None"
     """
     pathseq-t2t prefilter \\
         --input-bam $bam \\
