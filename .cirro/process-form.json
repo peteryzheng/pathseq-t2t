@@ -1,0 +1,24 @@
+{
+  "form": {
+    "type": "object",
+    "name": "PathSeq T2T",
+    "properties": {
+      "aligner": {
+        "title": "Host-subtraction aligner",
+        "description": "Tool used for the host-subtraction step.",
+        "type": "string",
+        "default": "bwa",
+        "enum": ["bwa", "dragen"],
+        "enumNames": ["BWA-MEM (default)", "Dragen-OS (faster, container must include it)"]
+      },
+      "kraken_db_url": {
+        "title": "Kraken2 database URL",
+        "description": "URL to a Kraken2 tarball. Auto-downloaded and cached on first run. See https://benlangmead.github.io/aws-indexes/k2 for alternatives (e.g. larger DBs).",
+        "type": "string",
+        "default": "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_08gb_20240605.tar.gz"
+      }
+    },
+    "required": ["aligner"]
+  },
+  "ui": {}
+}
