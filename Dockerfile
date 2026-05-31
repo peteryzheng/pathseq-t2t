@@ -49,8 +49,12 @@ RUN for bin in metaphlan bowtie2; do \
     done
 
 # Add main env binaries to PATH
+# SPARK_LOCAL_HOSTNAME bypasses InetAddress.getLocalHost() in GATK *Spark tools,
+# which fails on AWS Batch where the container hostname isn't in /etc/hosts.
 ENV PATH="/opt/conda/envs/main/bin:${PATH}" \
-    SCRIPT_DIR="/opt/pathseq-t2t/src"
+    SCRIPT_DIR="/opt/pathseq-t2t/src" \
+    SPARK_LOCAL_IP=127.0.0.1 \
+    SPARK_LOCAL_HOSTNAME=localhost
 
 # Smoke test
 RUN pathseq-t2t --version
