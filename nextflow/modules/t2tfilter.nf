@@ -5,6 +5,7 @@ process T2TFILTER {
     tuple val(meta), path(paired_bam), path(unpaired_bam)
     path reference
     path ref_index
+    path decoys_bed
 
     output:
     tuple val(meta), path("bams/${meta.id}.t2tfilt_paired.bam"),   emit: paired
@@ -22,7 +23,7 @@ process T2TFILTER {
     """
 
     script:
-    def decoys_arg = params.decoys_bed ? "--decoys-to-mask ${params.decoys_bed}" : ""
+    def decoys_arg = decoys_bed.name != 'NO_FILE' ? "--decoys-to-mask ${decoys_bed}" : "--decoys-to-mask None"
     """
     pathseq-t2t t2tfilter \\
         --input-paired   $paired_bam \\

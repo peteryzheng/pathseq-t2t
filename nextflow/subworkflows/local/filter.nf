@@ -21,7 +21,8 @@ workflow FILTER {
     T2TFILTER(
         QCFILTER.out.paired.join(QCFILTER.out.unpaired),
         ch_reference,
-        ch_ref_index
+        ch_ref_index,
+        ch_decoys_bed
     )
 
     emit:
