@@ -12,12 +12,16 @@ process CLASSIFY_KRAKEN {
     output:
     tuple val(meta), path("classification_stats/${meta.id}.paired.kraken.report.txt"),   emit: report_paired
     tuple val(meta), path("classification_stats/${meta.id}.unpaired.kraken.report.txt"), emit: report_unpaired
+    tuple val(meta), path("classification_stats/${meta.id}.paired.kraken.output.txt"),   emit: output_paired
+    tuple val(meta), path("classification_stats/${meta.id}.unpaired.kraken.output.txt"), emit: output_unpaired
 
     stub:
     """
     mkdir -p classification_stats
     touch classification_stats/${meta.id}.paired.kraken.report.txt
     touch classification_stats/${meta.id}.unpaired.kraken.report.txt
+    touch classification_stats/${meta.id}.paired.kraken.output.txt
+    touch classification_stats/${meta.id}.unpaired.kraken.output.txt
     """
 
     script:
