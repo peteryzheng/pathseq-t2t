@@ -42,6 +42,7 @@ process CLASSIFY_METAPHLAN {
 
     input:
     tuple val(meta), path(paired_bam), path(unpaired_bam)
+    path bowtie2_db
 
     output:
     tuple val(meta), path("classification_stats/${meta.id}.metaphlan.report.txt"), emit: report
@@ -61,7 +62,7 @@ process CLASSIFY_METAPHLAN {
         --sample-id ${meta.id} \\
         --outdir . \\
         --metaphlan-index ${params.metaphlan_index} \\
-        --bowtie2-index   ${params.bowtie2_index} \\
+        --bowtie2-index   ${bowtie2_db} \\
         --threads $task.cpus
     """
 }
@@ -71,6 +72,7 @@ process CLASSIFY_SYLPH {
 
     input:
     tuple val(meta), path(paired_bam), path(unpaired_bam)
+    path sylph_db
 
     output:
     tuple val(meta), path("classification_stats/${meta.id}.paired.sylph.report.txt"),   emit: report_paired
@@ -92,7 +94,7 @@ process CLASSIFY_SYLPH {
         --input-unpaired $unpaired_bam \\
         --sample-id ${meta.id} \\
         --outdir . \\
-        --sylph-index ${params.sylph_index} \\
+        --sylph-index ${sylph_db} \\
         $tax_arg \\
         --threads $task.cpus
     """
