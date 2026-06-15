@@ -1,6 +1,8 @@
 {
-  "outdir": "$.dataset.dataPath",
-  "aligner": "$.dataset.params.aligner",
-  "classifiers": "kraken",
-  "kraken_db_url": "$.dataset.params.kraken_db_url"
+  "outdir":          "$.dataset.dataPath",
+  "aligner":         "$.dataset.params.aligner",
+  "kraken_db_url":   "$.dataset.params.kraken_db_url",
+  "metaphlan_index": "$.dataset.params.metaphlan_index",
+  "sylph_db_url":    "$.dataset.params.sylph_db_url",
+  "sylph_taxonomy":  "$.dataset.params.sylph_taxonomy"
 }

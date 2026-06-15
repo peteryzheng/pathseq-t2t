@@ -30,5 +30,10 @@ ds.logger.info(samplesheet.to_csv(index=False))
 samplesheet.to_csv("samplesheet.csv", index=False)
 ds.add_param("samplesheet", "samplesheet.csv")
 
+classifiers = ds.params.get("classifiers", ["kraken"])
+if isinstance(classifiers, list):
+    classifiers = ",".join(classifiers)
+ds.add_param("classifiers", classifiers)
+
 ds.logger.info("Final params:")
 ds.logger.info(ds.params)

@@ -11,11 +11,41 @@
         "enum": ["bwa", "dragen"],
         "enumNames": ["BWA-MEM (default)", "Dragen-OS (faster, container must include it)"]
       },
+      "classifiers": {
+        "title": "Classifiers",
+        "description": "One or more classifiers to run on non-human reads.",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["kraken", "metaphlan", "sylph"],
+          "enumNames": ["Kraken2 (fast, read-level)", "MetaPhlAn (marker-gene)", "Sylph (GTDB, ANI-based)"]
+        },
+        "uniqueItems": true,
+        "default": ["kraken"]
+      },
       "kraken_db_url": {
         "title": "Kraken2 database URL",
         "description": "URL to a Kraken2 tarball. Auto-downloaded and cached on first run. See https://benlangmead.github.io/aws-indexes/k2 for alternatives (e.g. larger DBs).",
         "type": "string",
         "default": "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_08gb_20240605.tar.gz"
+      },
+      "metaphlan_index": {
+        "title": "MetaPhlAn index name",
+        "description": "Required if MetaPhlAn is selected. The index is auto-downloaded on first run via metaphlan --install.",
+        "type": "string",
+        "default": "mpa_vJun23_CHOCOPhlAnSGB_202403"
+      },
+      "sylph_db_url": {
+        "title": "Sylph database URL",
+        "description": "Required if Sylph is selected. URL to a .syldb file (e.g., GTDB-r226 from the Sylph GitHub releases page).",
+        "type": "string"
+      },
+      "sylph_taxonomy": {
+        "title": "Sylph taxonomy tag",
+        "description": "Required if Sylph is selected. Must match the database (e.g., GTDB_r226 for a GTDB-r226 database).",
+        "type": "string",
+        "enum": ["GTDB_r214", "GTDB_r220", "GTDB_r226", "FungiRefSeq-latest", "IMGVR_4.1", "UHGV_default", "OceanDNA", "SoilSMAG"],
+        "enumNames": ["GTDB r214", "GTDB r220", "GTDB r226", "FungiRefSeq (latest)", "IMGVR 4.1", "UHGV (default)", "OceanDNA", "SoilSMAG"]
       }
     },
     "required": ["aligner"]
