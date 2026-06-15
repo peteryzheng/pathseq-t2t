@@ -3,7 +3,8 @@ nextflow.enable.dsl = 2
 include { validateParameters } from 'plugin/nf-schema'
 
 include { DOWNLOAD_HG38; CRAM_TO_BAM                                      } from './modules/cram_to_bam'
-include { DOWNLOAD_REFERENCE; DOWNLOAD_HOST_INDEX; DOWNLOAD_KRAKEN_DB     } from './modules/download_refs'
+include { DOWNLOAD_REFERENCE; DOWNLOAD_HOST_INDEX; DOWNLOAD_KRAKEN_DB;
+          DOWNLOAD_METAPHLAN_DB; DOWNLOAD_SYLPH_DB                         } from './modules/download_refs'
 include { SUMMARIZE          } from './modules/summarize'
 include { SUMMARIZE_ASSEMBLY } from './modules/summarize_assembly'
 include { FILTER             } from './subworkflows/local/filter'
@@ -18,9 +19,10 @@ workflow {
 
     def classifiers = params.classifiers.tokenize(',')*.trim()*.toLowerCase()
 
-    if ('metaphlan' in classifiers && !params.metaphlan_index) error "'metaphlan' in --classifiers but --metaphlan_index not set"
-    if ('metaphlan' in classifiers && !params.bowtie2_index)   error "'metaphlan' in --classifiers but --bowtie2_index not set"
-    if ('sylph'     in classifiers && !params.sylph_index)     error "'sylph' in --classifiers but --sylph_index not set"
+    if ('sylph' in classifiers && !params.sylph_index && !params.sylph_db_url)
+        error "'sylph' in --classifiers but neither --sylph_index nor --sylph_db_url is set"
+    if ('sylph' in classifiers && !params.sylph_taxonomy)
+        error "'sylph' in --classifiers but --sylph_taxonomy not set"
 
     // ── Samplesheet ────────────────────────────────────────────────────────────
     ch_samples = Channel
@@ -76,6 +78,18 @@ workflow {
             : DOWNLOAD_KRAKEN_DB().dir)
         : Channel.value([])
 
+    ch_metaphlan_db = ('metaphlan' in classifiers)
+        ? (params.bowtie2_index
+            ? Channel.value(file(params.bowtie2_index, checkIfExists: true))
+            : DOWNLOAD_METAPHLAN_DB().dir)
+        : Channel.value([])
+
+    ch_sylph_db = ('sylph' in classifiers)
+        ? (params.sylph_index
+            ? Channel.value(file(params.sylph_index, checkIfExists: true))
+            : DOWNLOAD_SYLPH_DB().db)
+        : Channel.value([])
+
     // ── Filtering subworkflow ─────────────────────────────────────────────────
     ch_decoys_bed = params.decoys_bed
         ? Channel.value(file(params.decoys_bed, checkIfExists: true))
@@ -84,7 +98,7 @@ workflow {
     FILTER(ch_inputs, ch_hostdir, ch_reference, ch_ref_index, ch_decoys_bed)
 
     // ── Classification subworkflow ────────────────────────────────────────────
-    CLASSIFY(FILTER.out.filtered, classifiers, ch_kraken_db)
+    CLASSIFY(FILTER.out.filtered, classifiers, ch_kraken_db, ch_metaphlan_db, ch_sylph_db)
 
     // ── Summarize filtering + classification ───────────────────────────────────
     SUMMARIZE(

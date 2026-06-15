@@ -67,3 +67,45 @@ process DOWNLOAD_KRAKEN_DB {
     curl -L ${params.kraken_db_url} | tar -xz -C db
     """
 }
+
+// Downloads the MetaPhlAn bowtie2 index via metaphlan --install.
+// Uses the index name from --metaphlan_index (default: mpa_vJun23_CHOCOPhlAnSGB_202403).
+// Skip by providing --bowtie2_index pointing to a pre-staged directory.
+process DOWNLOAD_METAPHLAN_DB {
+    storeDir "${params.outdir}/_ref_cache/metaphlan"
+
+    output:
+    path "metaphlan_db", emit: dir
+
+    stub:
+    """
+    mkdir -p metaphlan_db
+    touch metaphlan_db/${params.metaphlan_index}.1.bt2l \
+          metaphlan_db/${params.metaphlan_index}.pkl
+    """
+
+    script:
+    """
+    mkdir -p metaphlan_db
+    metaphlan --install --index ${params.metaphlan_index} --bowtie2db metaphlan_db
+    """
+}
+
+// Downloads a Sylph database (.syldb) from --sylph_db_url.
+// Skip by providing --sylph_index pointing to a pre-staged .syldb file.
+process DOWNLOAD_SYLPH_DB {
+    storeDir "${params.outdir}/_ref_cache/sylph"
+
+    output:
+    path "db.syldb", emit: db
+
+    stub:
+    """
+    touch db.syldb
+    """
+
+    script:
+    """
+    curl -L ${params.sylph_db_url} -o db.syldb
+    """
+}

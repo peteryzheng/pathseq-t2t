@@ -103,22 +103,28 @@
         },
         "metaphlan_index": {
           "type": "string",
-          "description": "MetaPhlAn database name, e.g. mpa_vJun23_CHOCOPhlAnSGB_202403.",
+          "default": "mpa_vJun23_CHOCOPhlAnSGB_202403",
+          "description": "MetaPhlAn database name. Auto-downloaded via metaphlan --install when bowtie2_index is not set.",
           "fa_icon": "fas fa-database"
         },
         "bowtie2_index": {
           "type": "string",
-          "description": "Directory containing MetaPhlAn Bowtie2 index files.",
+          "description": "Directory containing MetaPhlAn Bowtie2 index files. Auto-downloaded if not set.",
           "fa_icon": "fas fa-folder"
+        },
+        "sylph_db_url": {
+          "type": "string",
+          "description": "URL to a Sylph database (.syldb file). Used when --sylph_index is not provided.",
+          "fa_icon": "fas fa-link"
         },
         "sylph_index": {
           "type": "string",
-          "description": "Path to Sylph database (.syldb file).",
+          "description": "Path to pre-staged Sylph database (.syldb file). Takes priority over sylph_db_url.",
           "fa_icon": "fas fa-file"
         },
         "sylph_taxonomy": {
           "type": "string",
-          "description": "Sylph taxonomy tag (see sylph-tax --help).",
+          "description": "Sylph taxonomy tag (see sylph-tax --help). Required when using Sylph.",
           "fa_icon": "fas fa-tags"
         }
       }
