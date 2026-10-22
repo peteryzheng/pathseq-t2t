@@ -4,7 +4,7 @@ include { T2TFILTER } from '../../modules/t2tfilter'
 
 workflow FILTER {
     take:
-    ch_inputs      // channel: [meta, bam]
+    ch_inputs      // channel: [meta, bam_or_cram, hg38_ref, hg38_fai] ([] refs for BAM)
     ch_hostdir     // channel: path
     ch_reference   // channel: path
     ch_ref_index   // channel: list<path>

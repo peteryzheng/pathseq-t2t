@@ -2,7 +2,7 @@ process PREFILTER {
     tag "${meta.id}"
 
     input:
-    tuple val(meta), path(bam)
+    tuple val(meta), path(bam), path(hg38_ref), path(hg38_fai)  // hg38_ref/fai: [] for BAM input
     path decoys_bed
 
     output:
@@ -20,11 +20,13 @@ process PREFILTER {
 
     script:
     def decoys_arg = decoys_bed.name != 'NO_FILE' ? "--decoys-to-mask ${decoys_bed}" : "--decoys-to-mask None"
+    def ref_arg    = bam.name.endsWith('.cram') ? "--cram-reference ${hg38_ref}" : ""
     """
     pathseq-t2t prefilter \\
         --input-bam $bam \\
         --aligner ${params.aligner} \\
         $decoys_arg \\
+        $ref_arg \\
         --sample-id ${meta.id} \\
         --outdir . \\
         --threads $task.cpus

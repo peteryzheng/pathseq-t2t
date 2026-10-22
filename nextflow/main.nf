@@ -2,8 +2,7 @@ nextflow.enable.dsl = 2
 
 include { validateParameters } from 'plugin/nf-schema'
 
-include { DOWNLOAD_HG38; CRAM_TO_BAM                                      } from './modules/cram_to_bam'
-include { DOWNLOAD_REFERENCE; DOWNLOAD_HOST_INDEX; DOWNLOAD_KRAKEN_DB;
+include { DOWNLOAD_HG38; DOWNLOAD_REFERENCE; DOWNLOAD_HOST_INDEX; DOWNLOAD_KRAKEN_DB;
           DOWNLOAD_METAPHLAN_DB; DOWNLOAD_SYLPH_DB                         } from './modules/download_refs'
 include { SUMMARIZE          } from './modules/summarize'
 include { SUMMARIZE_ASSEMBLY } from './modules/summarize_assembly'
@@ -35,7 +34,7 @@ workflow {
             tuple(meta, file(row.bam, checkIfExists: true))
         }
 
-    // ── CRAM → BAM conversion (auto-detected by extension) ────────────────────
+    // ── CRAM inputs (auto-detected by extension) are decoded by PREFILTER ─────
     ch_samples.branch {
         cram: it[1].name.endsWith('.cram')
         bam:  true
@@ -51,8 +50,9 @@ workflow {
         ch_hg38_fai = dl_hg38.fai
     }
 
-    CRAM_TO_BAM(ch_by_type.cram, ch_hg38_ref, ch_hg38_fai)
-    ch_inputs = ch_by_type.bam.mix(CRAM_TO_BAM.out.bam)
+    // channel: [meta, bam_or_cram, hg38_ref, hg38_fai] — reference slots are [] for BAM
+    ch_inputs = ch_by_type.bam.map { meta, bam -> tuple(meta, bam, [], []) }
+        .mix(ch_by_type.cram.combine(ch_hg38_ref).combine(ch_hg38_fai))
 
     // ── Reference data (auto-download once if not provided) ───────────────────
     if (params.reference) {

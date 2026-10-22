@@ -91,6 +91,30 @@ process DOWNLOAD_METAPHLAN_DB {
     """
 }
 
+// Downloads the Broad/GATK GRCh38 bundle reference for CRAM decoding in PREFILTER.
+process DOWNLOAD_HG38 {
+    input:
+    val trigger
+
+    output:
+    path "hg38.fa",     emit: ref
+    path "hg38.fa.fai", emit: fai
+    path "hg38.dict",   emit: dict
+
+    stub:
+    """
+    touch hg38.fa hg38.fa.fai hg38.dict
+    """
+
+    script:
+    """
+    base_url="https://storage.googleapis.com/gcp-public-data--broad-references/hg38/v0"
+    curl -fL "\${base_url}/Homo_sapiens_assembly38.fasta" -o hg38.fa
+    curl -fL "\${base_url}/Homo_sapiens_assembly38.fasta.fai" -o hg38.fa.fai
+    curl -fL "\${base_url}/Homo_sapiens_assembly38.dict" -o hg38.dict
+    """
+}
+
 // Downloads a Sylph database (.syldb) from --sylph_db_url.
 // Skip by providing --sylph_index pointing to a pre-staged .syldb file.
 process DOWNLOAD_SYLPH_DB {
