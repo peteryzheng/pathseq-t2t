@@ -13,6 +13,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Test profile moved from `nextflow.config` to `conf/test.config`
 - CRAM inputs are decoded directly by PREFILTER (`prefilter --cram-reference`) instead of first being converted to a full-size BAM; `CRAM_TO_BAM` is removed and `DOWNLOAD_HG38` moved to `modules/download_refs.nf`. PREFILTER outputs are unchanged.
 - Exit 1 is now retried (up to 2 attempts) and S3 transfers get 3 attempts outside any profile, so transient Cirro/AWS Batch S3 upload failures no longer terminate the run
+- Docker image builds its conda envs from explicit lockfiles (`envs/*.lock.txt`, exported from the 2026-06 `sha-3cae725` image) instead of re-solving the unpinned `envs/*.yml`; a cache-less rebuild on 2026-10-22 had silently moved samtools/htslib 1.23.1→1.24, kraken2 2.17.1→2.17.2 and picard 3.4→3.5
 
 ### Added
 - `nextflow_schema.json` — JSON Schema parameter validation; enables `--help`, nf-schema type checking, and Seqera Platform UI

@@ -16,13 +16,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy conda environment definitions
 COPY envs/ /opt/envs/
 
-# Build each conda environment
+# Build each conda environment from its explicit lockfile (exact package URLs + md5), so a
+# rebuild reproduces the same tool versions; the unpinned <env>.yml files are the specs the
+# locks were solved from. Regenerate a lock with: micromamba env export -n <env> --explicit
 # micromamba is on PATH as the standard entrypoint tool
-RUN micromamba create -y -f /opt/envs/main.yml     && \
-    micromamba create -y -f /opt/envs/metaphlan.yml && \
-    micromamba create -y -f /opt/envs/checkm2.yml   && \
-    micromamba create -y -f /opt/envs/checkv.yml    && \
-    micromamba create -y -f /opt/envs/gtdbtk.yml    && \
+RUN micromamba create -y -n main      -f /opt/envs/main.lock.txt      && \
+    micromamba create -y -n metaphlan -f /opt/envs/metaphlan.lock.txt && \
+    micromamba create -y -n checkm2   -f /opt/envs/checkm2.lock.txt   && \
+    micromamba create -y -n checkv    -f /opt/envs/checkv.lock.txt    && \
+    micromamba create -y -n gtdbtk    -f /opt/envs/gtdbtk.lock.txt    && \
     micromamba clean -afy
 
 # Install pathseq-t2t
