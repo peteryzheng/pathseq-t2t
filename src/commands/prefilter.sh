@@ -3,6 +3,7 @@ cmd_prefilter() {
   local unaligned_out="" decoys_out="" flagstat_out=""
   local sample_id=""
   local threads=1
+  local cram_reference=""
   local dont_overwrite=0
 
   while [[ $# -gt 0 ]]; do
@@ -16,11 +17,12 @@ cmd_prefilter() {
       --decoys-out)       decoys_out="${2:-}"; shift 2 ;;
       --flagstat-out)       flagstat_out="${2:-}"; shift 2 ;;
       --threads)             threads="${2:-}";         shift 2 ;;
+      --cram-reference)      cram_reference="${2:-}";  shift 2 ;;
       --dont-overwrite)      dont_overwrite=1;         shift 1 ;;
       -h|--help)
         cat <<'HLP'
 Usage: pathseq-t2t prefilter \
-  --input-bam <bam> \               Host-aligned bam file to filter
+  --input-bam <bam|cram> \          Host-aligned BAM or CRAM file to filter
   --aligner [dragen|bwa] \          Aligner used to generate the bam file
   --decoys-to-mask [<bed>|"None"]   BED of decoy/blacklist regions to mask (e.g. viral sequences) \
   [--sample-id <string>]            Sample ID to use for default output naming \
@@ -29,11 +31,13 @@ Usage: pathseq-t2t prefilter \
   [--decoys-out <bam>]              Output BAM for reads overlapping decoy regions \
   [--flagstat-out <tsv>]            Output TSV for samtools flagstat summary of input \
   [--threads <int>]                 Number of threads to use (default: auto) \
+  [--cram-reference <fasta>]        GRCh38 FASTA (with .fai) the CRAM input was written against \
   [--dont-overwrite]                If all outputs already exist and are valid, exit 0
 
 Notes:
   - If --sample-id is provided, default outputs are inferred under <outdir>.
   - If --sample-id is omitted, --unaligned-out, --decoys-out, and --flagstat-out are required.
+  - CRAM input requires --cram-reference unless REF_PATH is set.
 HLP
         return 0 ;;
       --) shift; break ;;
@@ -61,6 +65,15 @@ HLP
     fi
   fi
   
+  # CRAM input is decoded in-stream with the reference it was written against
+  local -a T_ARG=()
+  if [[ -n "${cram_reference}" ]]; then
+    require_file "${cram_reference}"
+    T_ARG=(-T "${cram_reference}")
+  elif [[ "${input_bam,,}" == *.cram && -z "${REF_PATH:-}" ]]; then
+    die "prefilter: CRAM input requires --cram-reference <fasta> (or REF_PATH): $input_bam"
+  fi
+
   # Normalize/interpret regions; build L_ARG as an array to avoid leading-space issues
   local -a L_ARG=()
   if [[ "${decoys_to_mask,,}" == "none" ]]; then
@@ -135,11 +148,12 @@ HLP
   log "  outputs:     unaligned_seqs=${unaligned_out} decoy_seqs=${decoys_out}"
   log "  flagstat:    ${flagstat_out}"
   log "  decoys_to_mask: ${decoys_to_mask:-<None>}"
+  log "  cram_reference: ${cram_reference:-<None>}"
 
   # Single-pass pipeline with tee: flagstat -> unaligned/excluded splits
   case "${aligner}" in
     dragen|DRAGEN)
-      time samtools view -@ "${threads}" -b "${input_bam}" \
+      time samtools view -@ "${threads}" -b ${T_ARG[@]+"${T_ARG[@]}"} "${input_bam}" \
         | tee >(samtools flagstat --output-fmt tsv -@ "${threads}" - > "${flagstat_out}") \
         | samtools view -@ "${threads}" -bh - -f 3 \
             -U >(samtools view -@ "${threads}" -bh -F 2048 -x SA -x OQ -x MD -o "${unaligned_out}") \
@@ -147,7 +161,7 @@ HLP
                  "${L_ARG[@]}" -o "${decoys_out}")
       ;;
     bwa|BWA)
-      time samtools view -@ "${threads}" -b "${input_bam}" \
+      time samtools view -@ "${threads}" -b ${T_ARG[@]+"${T_ARG[@]}"} "${input_bam}" \
         | tee >(samtools flagstat --output-fmt tsv -@ "${threads}" - > "${flagstat_out}") \
         | samtools view -@ "${threads}" -bh - -f 3 -e '[AS]>35' \
             -U >(samtools view -@ "${threads}" -bh -F 2048 -x SA -x OQ -x MD -o "${unaligned_out}") \

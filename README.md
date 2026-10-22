@@ -162,11 +162,11 @@ Required inputs:
 
 ### 2) `prefilter`
 
-Select host-unmapped reads and decoy-overlapping reads from an input BAM.
+Select host-unmapped reads and decoy-overlapping reads from an input BAM or CRAM.
 
 ```bash
 pathseq-t2t prefilter \
-  --input-bam <bam> \
+  --input-bam <bam|cram> \
   --aligner <dragen|bwa> \
   --decoys-to-mask <bed|None> \
   [--sample-id <id>] \
@@ -175,12 +175,14 @@ pathseq-t2t prefilter \
   [--decoys-out <bam>] \
   [--flagstat-out <tsv>] \
   [--threads <int>] \
+  [--cram-reference <fasta>] \
   [--dont-overwrite]
 ```
 
 Required inputs:
 
 - Always: `--input-bam`, `--aligner`, `--decoys-to-mask`
+- CRAM input: `--cram-reference` (the GRCh38 FASTA the CRAM was written against, with `.fai`), unless `REF_PATH` is set
 - With `--sample-id`: outputs default under `<outdir>`
 - Without `--sample-id`: provide `--unaligned-out`, `--decoys-out`, and `--flagstat-out`
 

@@ -14,7 +14,7 @@ nextflow run nextflow/main.nf \
 
 ## Samplesheet
 
-CSV with `sample_id` and `bam` columns. Both BAM and CRAM inputs are accepted; CRAM files are auto-converted using the GATK GRCh38 reference (downloaded once if `--hg38_ref` is not provided).
+CSV with `sample_id` and `bam` columns. Both BAM and CRAM inputs are accepted; CRAM files are decoded directly by PREFILTER using the GATK GRCh38 reference (downloaded once if `--hg38_ref` is not provided), with no intermediate BAM.
 
 ```csv
 sample_id,bam
@@ -27,9 +27,7 @@ A template is at `assets/samplesheet_template.csv`.
 ## Workflow
 
 ```
-[BAM / CRAM input]
-       │
-  CRAM_TO_BAM          (CRAM inputs only — samtools view with GRCh38 reference)
+[BAM / CRAM input]     (CRAM decoded in PREFILTER with the GRCh38 reference)
        │
   ┌────▼────────────────────────────────────┐
   │ FILTER subworkflow                       │
@@ -125,7 +123,6 @@ nextflow/
 │   ├── aws.config                 # AWS Batch settings
 │   └── test.config                # Minimal test overrides
 ├── modules/
-│   ├── cram_to_bam.nf             # CRAM → BAM conversion
 │   ├── prefilter.nf               # Extract unaligned + decoy reads
 │   ├── qcfilter.nf                # PathSeq host QC filtering
 │   ├── t2tfilter.nf               # T2T CHM13v2 alignment filter
